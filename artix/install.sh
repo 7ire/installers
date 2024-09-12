@@ -35,7 +35,7 @@ rootlabel="artixlinux" # Partition label
 btrfssubvols=(         # Btrfs subvolumes
   "libvirt"
   "docker"
-  "container"
+  "containers"
 )
 btrfsopts=(            # Btrfs mount options
   "rw"
@@ -58,6 +58,12 @@ wm="hyprland"  # Window manager      - (hyprlad/dwm)
 # Script body
 # -----------------------------------------------------------------------------
 
+if [[ $target =~ ^/dev/nvme[0-9]+n[0-9]+$ ]]; then
+  target_part="${target}p"
+else
+  target_part="$target"
+fi
+
 # Check if root
 [ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }
 # Check if UEFI
@@ -68,13 +74,15 @@ loadkeys $keyboard              # Set the keyboard layout
 # Enable OpenNTP
 ln -s /etc/runit/sv/openntpd /run/runit/service
 sv up openntpd
+# Update mirrorlist - 'rate-mirrors'
+rate-mirrors --protocol https --allow-root --disable-comments --disable-comments-in-file --save /etc/pacman.d/mirrorlist artix
 pacman -Syy &> /dev/null        # Refresh database(s)
 
 # Enable parrallel downloads in pacman
 sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
 # Update keyrings
 pacman -S --noconfirm archlinux-keyring artix-keyring &> /dev/null # (Archlinux)
-pacman-key --init &>            # Initialize keyring(s)
+pacman-key --init               # Initialize keyring(s)
 pacman -Syy &> /dev/null        # Refresh database(s)
 
 
@@ -83,10 +91,10 @@ pacman -Syy &> /dev/null        # Refresh database(s)
 pacman -S --noconfirm gptfdisk &> /dev/null    # Install dependecy packages - 'sgdisk'
 wipefs -af $target                             # Wipe data from target disk
 sgdisk --zap-all --clear $target &> /dev/null  # Clear partition table from target disk
-partx $target &> /dev/null                     # Update target disk info(s) and inform system
+partx $target                                  # Update target disk info(s) and inform system
 
 # Fill target disk w/ random data (security measure)
-echo YES | cryptsetup open --type plain -d /dev/urandom $target target
+echo YES | cryptsetup open --type plain -d /dev/urandom $target target &> /dev/null
 dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev/null
 cryptsetup close target
 
@@ -105,6 +113,7 @@ partx $target &> /dev/null
 # Create support variables
 if [ "$encrypt" = "yes" ]; then
   # Encrypt partition 2 using the provided key
+  # TODO: controllare per le opzioni di YES e doppia pwd inser
   echo -n "$key" | cryptsetup --type luks2 -v -y luksFormat ${target}p2 --key-file=- &> /dev/null
   # Open the encrypted partition
   echo -n "$key" | cryptsetup open --perf-no_read_workqueue --perf-no_write_workqueue --persistent ${target}p2 cryptdev --key-file=- &> /dev/null
@@ -124,9 +133,9 @@ else
 fi
 
 # Mount partitions
-mkdir /mnt/$espmountpt
-mount ${target}p1 /mnt/$espmountpt &> /dev/null  # Mount EFI partition
-mount $root_device /mnt &> /dev/null             # Mount root partition
+mkdir -p /mnt/$espmountpt
+mount ${target}p1 /mnt/$espmountpt  # Mount EFI partition
+mount $root_device /mnt             # Mount root partition
 
 if [ "filesystem" = "btrfs" ]; then
   # Create Btrfs subvolumes for system and data segregation
@@ -143,7 +152,7 @@ if [ "filesystem" = "btrfs" ]; then
   done
 
   # Unmount the root device to remount with options
-  umount /mnt &> /dev/null
+  umount /mnt
   # Set mount options for Btrfs subvolumes
   sv_opts=""
   # Remount the main system subvolume
