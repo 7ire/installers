@@ -1,43 +1,49 @@
 #        /\        
-#       /  \       | Title: Tir3 Artix Linux (runit) - Installer             |
-#      /`'.,\      |---------------------------------------------------------|
-#     /     ',     |     OS      | Artix Linux (runit init-system)           |
-#    /      ,`\    | Description | Install Artix Linux system w/ user config |
-#   /   ,.'`.  \   |    Owner    | Tir3                                      |
-#  /.,'`     `'.\  |   GitHub    | https://github.com/7ire                   |
+#       /  \       | Title: Tir3 Artix Linux (runit) - Installer               |
+#      /`'.,\      |-----------------------------------------------------------|
+#     /     ',     |     OS      | Artix Linux (runit init-system)             |
+#    /      ,`\    | Description | Install Artix Linux system w/ user config   |
+#   /   ,.'`.  \   |    Owner    | Tir3                                        |
+#  /.,'`     `'.\  |   GitHub    | https://github.com/7ire                     |
 
 
 
 # Configuration parameters
-# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # System
 hostname="artix"  # Hostname
+
+
 
 # Locale
 lang=""        # Language
 timezone=""    # Timezone
 keyboard="us"  # Keyboard layout
 
+
+
 # Disk
 target="/dev/sda"      # Target disk     -    'lsblk'
 is_ssd="no"            # Is SSD disk?    -   (yes/no)
-encrypt="no"           # Encrypt disk?   -   (yes/no)
-type="lusk2"           # Encryption type - (lusk/lusk2)
-key="changeme"         # Encryption key
+
+encrypt="no"                   # Encrypt disk?   -   (yes/no)
+encrypt_type="luks2"           # Encryption type - (luks/luks2)
+encrypt_key="changeme"         # Encryption key
 ## partition 1 - EFI
-espsize="512M"         # EFI partition size
-espmountpt="esp"       # Mount point
-esplabel="boot"        # Partition label
+part1_size="512M"        # EFI partition size
+part1_mount="esp"        # Mount point
+part1_label="ESP"        # Partition label (use uppercase)
 ## partition 2 - root
-filesystem="ext4"      # Filesystem type - (ext4/btrfs)
-rootlabel="artixlinux" # Partition label
-btrfssubvols=(         # Btrfs subvolumes
+part2_fs="ext4"          # Filesystem type - (ext4/btrfs)
+part2_label="artixlinux" # Partition label
+### Btrfs additional components
+btrfs_subvols=(          # Btrfs subvolumes
   "libvirt"
   "docker"
   "containers"
 )
-btrfsopts=(            # Btrfs mount options
+btrfs_opts=(             # Btrfs mount options
   "rw"
   "noatime"
   "compress-force=zstd:1"
@@ -56,34 +62,37 @@ wm="hyprland"  # Window manager      - (hyprlad/dwm)
 
 
 # Script body
-# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
+# If target is a NVMe disk
 if [[ $target =~ ^/dev/nvme[0-9]+n[0-9]+$ ]]; then
-  target_part="${target}p"
+  target_part=${target}p  # Add 'p' to NVMe disk - for the partition
 else
-  target_part="$target"
+  target_part="$target"   # Use target as is
 fi
 
-# Check if root
+# If script is not run as root, exit
 [ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }
-# Check if UEFI
+# If UEFI mode is not detected, exit
 [ -d /sys/firmware/efi/efivars ] || { echo "UEFI mode not detected. Aborting script."; exit 1; }
+
+
 
 # [0]. Preparation to install Artix
 loadkeys $keyboard              # Set the keyboard layout
-# Enable OpenNTP
+# Enable Network Time Protocol - OpenNTP
 ln -s /etc/runit/sv/openntpd /run/runit/service
 sv up openntpd
-# Update mirrorlist - 'rate-mirrors'
+# Update mirrorlist - rate-mirrors
 rate-mirrors --protocol https --allow-root --disable-comments --disable-comments-in-file --save /etc/pacman.d/mirrorlist artix
 pacman -Syy &> /dev/null        # Refresh database(s)
 
-# Enable parrallel downloads in pacman
-sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+# Tweak pacman
+sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf  # Enable parrallel downloads in pacman
 # Update keyrings
-pacman -S --noconfirm archlinux-keyring artix-keyring &> /dev/null # (Archlinux)
-pacman-key --init               # Initialize keyring(s)
-pacman -Syy &> /dev/null        # Refresh database(s)
+pacman -S --noconfirm archlinux-keyring artix-keyring &> /dev/null  # Download updated keyring(s)
+pacman-key --init         # Initialize keyring(s)
+pacman -Syy &> /dev/null  # Refresh database(s)
 
 
 
@@ -99,45 +108,43 @@ dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev
 cryptsetup close target
 
 # Partition the target disk
-sgdisk -n 0:0:+${espsize} -t 0:ef00 -c 0:ESP $target &> /dev/null  # Partition 1: EFI System Partition
-sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null         # Partition 2: Root Partition (non-encrypted)
+sgdisk -n 0:0:+${part1_size} -t 0:ef00 -c 0:ESP $target &> /dev/null  # Partition 1: EFI System Partition
+sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null            # Partition 2: Root Partition (non-encrypted)
 
 # If target is encrypted
 if [ "$encrypt" = "yes" ]; then
-  sgdisk -t 2:8309 $disk &> /dev/null  # Change partition 2 type to LUKS (for encryption)
+  sgdisk -t 2:8309 $target &> /dev/null  # Change partition 2 type to LUKS (for encryption)
 fi
 
-# Update target disk info(s) and inform system
-partx $target &> /dev/null
+partx $target &> /dev/null  # Update target disk info(s) and inform system
 
 # Create support variables
 if [ "$encrypt" = "yes" ]; then
   # Encrypt partition 2 using the provided key
-  # TODO: controllare per le opzioni di YES e doppia pwd inser
-  echo -n "$key" | cryptsetup --type luks2 -v -y luksFormat ${target}p2 --key-file=- &> /dev/null
+  # TODO: controllare per le opzioni di YES e doppia pwd insert
+  echo -n "$encrypt_key" | cryptsetup --type $encrypt_type -v -y luksFormat ${target_part}2 --key-file=- &> /dev/null
   # Open the encrypted partition
-  echo -n "$key" | cryptsetup open --perf-no_read_workqueue --perf-no_write_workqueue --persistent ${target}p2 cryptdev --key-file=- &> /dev/null
-  # Set the root device to the encrypted partition
-  root_device="/dev/mapper/cryptdev"
+  echo -n "$key" | cryptsetup open --perf-no_read_workqueue --perf-no_write_workqueue --persistent ${target_part}2 cryptdev --key-file=- &> /dev/null
+  root_device="/dev/mapper/cryptdev"  # Set the root device to the encrypted partition
 else
-  root_device="${disk}p2"
+  root_device=${target_part}2         # Set the root device to the non-encrypted partition
 fi
 
 # Format partitions
-mkfs.vfat -F32 -n ESP ${target}p1 &> /dev/null  # Partition 1: EFI System Partition
+mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null  # Partition 1: EFI System Partition
 # Partition 2: Root Partition
-if [ "filesystem" = "btrfs" ]; then
-  mkfs.btrfs -L $label $root_device &> /dev/null  # BTRFS
+if [ $part2_fs = "btrfs" ]; then
+  mkfs.btrfs -L $part2_label $root_device &> /dev/null  # BTRFS
 else
-  mkfs.ext4 -L $label $root_device &> /dev/null   # EXT4
+  mkfs.ext4 -L $part2_label $root_device &> /dev/null   # EXT4
 fi
 
 # Mount partitions
-mkdir -p /mnt/$espmountpt
-mount ${target}p1 /mnt/$espmountpt  # Mount EFI partition
-mount $root_device /mnt             # Mount root partition
+mkdir -p /mnt/$part1_mount               # Create mount point for EFI partition
+mount ${target_part}1 /mnt/$part1_mount  # Mount EFI partition
+mount $root_device /mnt                  # Mount root partition
 
-if [ "filesystem" = "btrfs" ]; then
+if [ $part2_fs = "btrfs" ]; then
   # Create Btrfs subvolumes for system and data segregation
   btrfs subvolume create /mnt/@ &> /dev/null           # Main system subvolume
   btrfs subvolume create /mnt/@home &> /dev/null       # Home directory subvolume
