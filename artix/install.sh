@@ -17,7 +17,7 @@ hostname="artix"  # Hostname
 
 
 # Locale
-lang=""        # Language
+lang="en_US.UTF-8"        # Language
 timezone=""    # Timezone
 keyboard="us"  # Keyboard layout
 
@@ -27,16 +27,20 @@ keyboard="us"  # Keyboard layout
 target="/dev/sda"      # Target disk     -    'lsblk'
 is_ssd="no"            # Is SSD disk?    -   (yes/no)
 
+# Encryption
 encrypt="no"                   # Encrypt disk?   -   (yes/no)
 encrypt_type="luks2"           # Encryption type - (luks/luks2)
 encrypt_key="changeme"         # Encryption key
+
 ## partition 1 - EFI
 part1_size="512M"        # EFI partition size
 part1_mount="esp"        # Mount point
 part1_label="ESP"        # Partition label (use uppercase)
+
 ## partition 2 - root
 part2_fs="ext4"          # Filesystem type - (ext4/btrfs)
 part2_label="artixlinux" # Partition label
+
 ### Btrfs additional components
 btrfs_subvols=(          # Btrfs subvolumes
   "libvirt"
