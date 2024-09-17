@@ -17,9 +17,9 @@ hostname="artix"  # Hostname
 
 
 # Locale
-lang="en_US.UTF-8"        # Language
-timezone=""    # Timezone
-keyboard="us"  # Keyboard layout
+lang="en_US.UTF-8"           # Language
+timezone="America/New_York"  # Timezone
+keyboard="us"                # Keyboard layout
 
 
 
@@ -28,9 +28,9 @@ target="/dev/sda"      # Target disk     -    'lsblk'
 is_ssd="no"            # Is SSD disk?    -   (yes/no)
 
 # Encryption
-encrypt="no"                   # Encrypt disk?   -   (yes/no)
-encrypt_type="luks2"           # Encryption type - (luks/luks2)
-encrypt_key="changeme"         # Encryption key
+encrypt="no"            # Encrypt disk?   -   (yes/no)
+encrypt_type="luks2"    # Encryption type - (luks/luks2)
+encrypt_key="changeme"  # Encryption key
 
 ## partition 1 - EFI
 part1_size="512M"        # EFI partition size
@@ -75,18 +75,19 @@ else
   target_part="$target"   # Use target as is
 fi
 
-# If script is not run as root, exit
-[ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }
-# If UEFI mode is not detected, exit
-[ -d /sys/firmware/efi/efivars ] || { echo "UEFI mode not detected. Aborting script."; exit 1; }
+# Checkerss
+[ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }                     # If script is not run as root, exit
+[ -d /sys/firmware/efi/efivars ] || { echo "UEFI mode not detected. Aborting script."; exit 1; }  # If UEFI mode is not detected, exit
 
 
 
 # [0]. Preparation to install Artix
 loadkeys $keyboard              # Set the keyboard layout
+
 # Enable Network Time Protocol - OpenNTP
-ln -s /etc/runit/sv/openntpd /run/runit/service
-sv up openntpd
+ln -s /etc/runit/sv/openntpd /run/runit/service  # Link the service
+sv up openntpd                                   # Start the service
+
 # Update mirrorlist - rate-mirrors
 rate-mirrors --protocol https --allow-root --disable-comments --disable-comments-in-file --save /etc/pacman.d/mirrorlist artix
 pacman -Syy &> /dev/null        # Refresh database(s)
@@ -106,7 +107,7 @@ wipefs -af $target                             # Wipe data from target disk
 sgdisk --zap-all --clear $target &> /dev/null  # Clear partition table from target disk
 partx $target                                  # Update target disk info(s) and inform system
 
-# Fill target disk w/ random data (security measure)
+# Fill target disk w/ random datas (security measure)
 echo YES | cryptsetup open --type plain -d /dev/urandom $target target &> /dev/null
 dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev/null
 cryptsetup close target
@@ -115,15 +116,17 @@ cryptsetup close target
 sgdisk -n 0:0:+${part1_size} -t 0:ef00 -c 0:ESP $target &> /dev/null  # Partition 1: EFI System Partition
 sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null            # Partition 2: Root Partition (non-encrypted)
 
-# If target is encrypted
-if [ "$encrypt" = "yes" ]; then
-  sgdisk -t 2:8309 $target &> /dev/null  # Change partition 2 type to LUKS (for encryption)
-fi
+# Update target disk info(s) and inform system
+partx $target &> /dev/null
 
-partx $target &> /dev/null  # Update target disk info(s) and inform system
 
-# Create support variables
+# [1.1] Create support variables
 if [ "$encrypt" = "yes" ]; then
+  # Change partition 2 type to LUKS (for encryption)
+  sgdisk -t 2:8309 $target &> /dev/null
+  # Update target disk info(s) and inform system
+  partx $target &> /dev/null
+
   # Encrypt partition 2 using the provided key
   # TODO: controllare per le opzioni di YES e doppia pwd insert
   echo -n "$encrypt_key" | cryptsetup --type $encrypt_type -v -y luksFormat ${target_part}2 --key-file=- &> /dev/null
@@ -134,7 +137,7 @@ else
   root_device=${target_part}2         # Set the root device to the non-encrypted partition
 fi
 
-# Format partitions
+# [1.2] Format partitions
 mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null  # Partition 1: EFI System Partition
 # Partition 2: Root Partition
 if [ $part2_fs = "btrfs" ]; then
@@ -193,16 +196,29 @@ basestrap -i base base-devel \
   vim \
   &> /dev/null
 
-# [3]. Artix Linux system configuration
-artix-chroot /mnt bash
 # Generate fstab
 genfstab -U /mnt >> /mnt/etc/fstab
+
+# [3]. Artix Linux system configuration
+artix-chroot /mnt bash
+
 # Timezone
 ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 hwclock --systohc
+
 # Hostname
 echo $hostname > /etc/hostname
+
 # Locale
 sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen
 echo "LANG=${lang}" > /etc/locale.conf
 locale-gen
+
+# TODO: bootloader
+
+# Network
+ln -s /etc/runit/sv/NetworkManager /etc/runit/runsvdir/current  # Enable NetworkManager service
+
+# TODO: NTP
+
+# TODO: User
