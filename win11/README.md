@@ -37,12 +37,11 @@ In this section it is gonna be listed all the BIOS parameters that are changed f
   - Memory Context Restore => **Disable**
   - UCLK DIV1 Mode => **UCLK = MEMCLK**
 - DIGI + VRM:
-  - CPU Load-time Calibration => **Level 3 / Level 4 / Auto**
+  - CPU Load-lime Calibration => **Level 3 / Level 4 / Auto**
   - CPU Current Capability => **120%**
   - CPU Power Duty Control => **Extreme**
   - CPU Power Phase Control => **Extreme**
   - VDDSOC Current Capability => **120%**
-  - 
 
 **Advance**:
 
