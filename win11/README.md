@@ -60,6 +60,7 @@ In this section it is gonna be listed all the BIOS parameters that are changed f
   - IOMMU => **Disable**
   - CPU Common Option:
     - Power Supply Common Control => **Typical Current Idle**
+- Onboard Device Configuration/USB Power Delivery in Soft Off State (S5) => **Disable**
 
 > [!NOTE]
 > Disable some useless app in the BIOS that Asus will try to download automatically.
