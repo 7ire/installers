@@ -6,6 +6,7 @@
   - [Bios Settings 7950x3D 7800x3D [Asus Rog Strix B650E-F]](https://www.youtube.com/watch?v=kqAsNB5xCVI)
   - [Undervolt your Ryzen 7 7800X3D for more FPS and Lower Temperature!](https://www.youtube.com/watch?v=BNAs3bl-yv0)
 - Base optimization
+  - [New Windows Tool and MicroWin 5 Minute Install](https://www.youtube.com/watch?v=92SM8Az5QVM)
 - Gaming improvements
 - Other
 
@@ -67,7 +68,7 @@ Finally remember to save the profile and the BIOS section is done :D
 
 ## Base optimization
 
-For the base system optimization it is pretty straight forward. 
+For the base system optimization it is pretty straight forward.
 
 Just follow this [guide](https://www.youtube.com/watch?v=92SM8Az5QVM) and you should be ready to have a clean and light Windows ISO.
 
