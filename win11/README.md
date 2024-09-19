@@ -66,3 +66,11 @@ In this section it is gonna be listed all the BIOS parameters that are changed f
 Finally remember to save the profile and the BIOS section is done :D
 
 ## Base optimization
+
+For the base system optimization it is pretty straight forward. 
+
+Just follow this [guide](https://www.youtube.com/watch?v=92SM8Az5QVM) and you should be ready to have a clean and light Windows ISO.
+
+> [!TIP]
+> I suggest to make a standard Windows 11 installation and install only the necessary drivers.
+> When generating the custom optimized make sure to include the drivers installed, this will help to pack in the ISO also the hw drivers.
