@@ -5,6 +5,7 @@
 - BIOS Tweak
   - [Bios Settings 7950x3D 7800x3D [Asus Rog Strix B650E-F]](https://www.youtube.com/watch?v=kqAsNB5xCVI)
   - [Undervolt your Ryzen 7 7800X3D for more FPS and Lower Temperature!](https://www.youtube.com/watch?v=BNAs3bl-yv0)
+  - [AMD Core-Parking problems FIXED once and for all!](https://www.youtube.com/watch?v=4wdQpVcL_a4)
 - Base optimization
   - [New Windows Tool and MicroWin 5 Minute Install](https://www.youtube.com/watch?v=92SM8Az5QVM)
 - Gaming improvements
@@ -60,6 +61,7 @@ In this section it is gonna be listed all the BIOS parameters that are changed f
   - IOMMU => **Disable**
   - CPU Common Option:
     - Power Supply Common Control => **Typical Current Idle**
+  - SMU Common Option/CPPC Dynamic Preferred Cores => **Drivers** (*this is a fix for 3D cpu*)
 - Onboard Device Configuration/USB Power Delivery in Soft Off State (S5) => **Disable**
 
 > [!NOTE]
