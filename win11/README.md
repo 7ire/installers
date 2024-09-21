@@ -1,123 +1,131 @@
 # Windows 11
 
-**TLTR** Resources used to create this guide:
+**TL;DR**: Resources used to create this guide:
 
-- BIOS Tweak
-  - [Bios Settings 7950x3D 7800x3D [Asus Rog Strix B650E-F]](https://www.youtube.com/watch?v=kqAsNB5xCVI)
-  - [Undervolt your Ryzen 7 7800X3D for more FPS and Lower Temperature!](https://www.youtube.com/watch?v=BNAs3bl-yv0)
-  - [AMD Core-Parking problems FIXED once and for all!](https://www.youtube.com/watch?v=4wdQpVcL_a4)
-- Base optimization
-  - [New Windows Tool and MicroWin 5 Minute Install](https://www.youtube.com/watch?v=92SM8Az5QVM)
-- Gaming improvements
-- Other
+### BIOS Tweak Resources
 
-Start by updating motherboard BIOS, you can follow the manufacture instructions.
+- [BIOS Settings for 7950x3D and 7800x3D on Asus Rog Strix B650E-F](https://www.youtube.com/watch?v=kqAsNB5xCVI)
+- [Undervolting Ryzen 7 7800X3D for More FPS and Lower Temperatures](https://www.youtube.com/watch?v=BNAs3bl-yv0)
+- [Fixing AMD Core-Parking Problems](https://www.youtube.com/watch?v=4wdQpVcL_a4)
 
-For my reference I have a Asus B650E-F:
+### Base Optimization Resources
+
+- [New Windows Tool and MicroWin 5-Minute Install](https://www.youtube.com/watch?v=92SM8Az5QVM)
+- [AMD is getting SCREWED by Microsoft - Windows 10 vs 11](https://www.youtube.com/watch?v=mVpv-EpEoGM)
+
+### Additional Topics
+
+- Gaming Improvements
+- Other Customizations
+
+---
+
+## Getting Started: BIOS Update
+
+Start by updating your motherboard BIOS. Follow the manufacturer’s instructions carefully. Here are some resources for the **Asus B650E-F** motherboard:
 
 - [BIOS Download](https://rog.asus.com/it/motherboards/rog-strix/rog-strix-b650e-f-gaming-wifi-model/helpdesk_bios/)
-- [Ez Flash](https://www.youtube.com/watch?v=Em7SRaG3L_0)
-- [BIOS Flashback](https://www.youtube.com/watch?v=FPyElZcsW6o)
+- [Ez Flash Guide](https://www.youtube.com/watch?v=Em7SRaG3L_0)
+- [BIOS Flashback Guide](https://www.youtube.com/watch?v=FPyElZcsW6o)
 
-## BIOS Tweak
+---
 
-In this section it is gonna be listed all the BIOS parameters that are changed from their respective default values.
+## BIOS Tweaks
 
-> [!WARNING]
-> Some values should be universal for each manufacture and models, but double check to be 100% sure for each settings.
+In this section, I will list all the BIOS parameters that have been changed from their default values.
 
-**AI Tweaker**:
+> ⚠️ **Warning**: Some values might be universal across different manufacturers, but double-check each setting for your specific motherboard.
 
-- Ai Overlock Tuner => **DOCP II / EXPO II**
+### AI Tweaker Settings
 
-> [!NOTE]
-> Make sure the RAM speed is the highest you can get.
+| **Setting**                     | **Value**                      |
+|----------------------------------|---------------------------------|
+| Ai Overlock Tuner                | DOCP II / EXPO II               |
+| FCLK Frequency                   | 1/3 of max RAM speed (e.g., 2000 MHz) |
+| Power Down Enable                | Disabled                       |
+| Memory Context Restore           | Disabled                       |
+| UCLK DIV1 Mode                   | UCLK = MEMCLK                   |
 
-- FLCK freq => **1/3 of you MAX speed**, in my case 2000Mhz
-- DRAM Timing control:
-  - Power Down Enable => **Disable**
-  - Memory Context Restore => **Disable**
-  - UCLK DIV1 Mode => **UCLK = MEMCLK**
-- DIGI + VRM:
-  - CPU Load-lime Calibration => **Level 3 / Level 4 / Auto**
-  - CPU Current Capability => **120%**
-  - CPU Power Duty Control => **Extreme**
-  - CPU Power Phase Control => **Extreme**
-  - VDDSOC Current Capability => **120%**
+> 💡 **Tip**: Ensure your RAM speed is set to the maximum supported frequency.
 
-**Advance**:
+### DRAM Timing Control
 
-- AMD Overclocking:
-  - Precision Boost Override:
-    - Enhancement (or Advance, based on which give you the Level) => **Level 3 (80°)**
-    - Curve Optimizer (not GFX, is the integrated GPU) => **All cores**, **Negative**, **20**
-  - SoC/Uncore OC Mode => **Enable**
-- CPU Configuration:
-  - PSS Support => **Disable**
-  - SVM Mode => **Disable**
-- PCI Subsystem Setting/Resize BAR Support => **Enable**
-- AMD CBS:
-  - Global C-State control => **Disable**
-  - IOMMU => **Disable**
-  - CPU Common Option:
-    - Power Supply Common Control => **Typical Current Idle**
-  - SMU Common Option/CPPC Dynamic Preferred Cores => **Drivers** (*this is a fix for 3D cpu*)
-- Onboard Device Configuration/USB Power Delivery in Soft Off State (S5) => **Disable**
+| **Setting**                     | **Value**                      |
+|----------------------------------|---------------------------------|
+| CPU Load-line Calibration        | Level 3 / Level 4 / Auto        |
+| CPU Current Capability           | 120%                           |
+| CPU Power Duty Control           | Extreme                        |
+| CPU Power Phase Control          | Extreme                        |
+| VDDSOC Current Capability        | 120%                           |
 
-> [!NOTE]
-> Disable some useless app in the BIOS that Asus will try to download automatically.
+### Advanced Settings
 
-Finally remember to save the profile and the BIOS section is done :D
+| **Setting**                     | **Value**                      |
+|----------------------------------|---------------------------------|
+| Precision Boost Override         | Level 3 (80°C)                 |
+| Curve Optimizer                  | All cores, Negative, -20        |
+| SoC/Uncore OC Mode               | Enabled                        |
+| PSS Support                      | Disabled                       |
+| SVM Mode                         | Disabled                       |
+| Resize BAR Support               | Enabled                        |
 
-## Base optimization
+### AMD CBS Settings
 
-For the base system optimization it is pretty straight forward.
+| **Setting**                     | **Value**                      |
+|----------------------------------|---------------------------------|
+| Global C-State Control           | Disabled                       |
+| IOMMU                            | Disabled                       |
+| Power Supply Idle Control        | Typical Current Idle            |
+| CPPC Dynamic Preferred Cores     | Drivers (fix for 3D CPUs)       |
 
-Just follow this [guide](https://www.youtube.com/watch?v=92SM8Az5QVM) and you should be ready to have a clean and light Windows ISO.
+> 💡 **Tip**: Disable any unnecessary apps in BIOS that may automatically download from Asus.
 
-> [!TIP]
-> I suggest to make a standard Windows 11 installation and install only the necessary drivers.
-> When generating the custom optimized make sure to include the drivers installed, this will help to pack in the ISO also the hw drivers.
+> 💾 **Save** the profile when you're done. The BIOS setup is complete!
 
-In brief the steps are:
+---
 
-1. Download the latest version of **Windows 11**
-2. Install Windows and do the basic configuration w/ drivers
-3. Use the **[Chris Titus Tech's Windows Utility](https://github.com/christitustech/winutil)**
+## Base Optimization
 
-``` powershell
+To optimize your system, follow this [video guide](https://www.youtube.com/watch?v=92SM8Az5QVM) to create a clean and lightweight Windows ISO.
+
+> 💡 **Tip**: I recommend performing a standard Windows 11 installation first, installing necessary drivers, and then creating a custom ISO. Include your installed drivers in the custom ISO for convenience.
+
+### Steps Overview
+
+1. Download the latest version of **Windows 11**.
+2. Install Windows and configure it with the basic drivers.
+3. Run **[Chris Titus Tech's Windows Utility](https://github.com/christitustech/winutil)** to optimize your system.
+
+```powershell
 irm "https://christitus.com/win" | iex
 ```
 
-4. Create a MicroWin ISO with:
+4. Create a **MicroWin ISO** with the following settings:
+   - Default MicroWin configurations.
+   - Include the current system drivers.
+   - Set a system username and password.
+5. Create a bootable USB drive with the newly generated ISO.
 
-  - Default MicroWin settings
-  - Include current system drivers
-  - System username e password
-5. Create a bootable USB with the ISO generated
-
-> [!TIP]
-> When installing Windows 11 use those parameters:
+> 💡 **Tip**: When installing Windows 11, use the following locale settings:
 >
-> - **English (United State) / International**
-> - **English (United State) / International**
-> - **US / International**
+> - **Language**: English (United States) / International
+> - **Time and Currency Format**: English (United States)
+> - **Keyboard**: US / International
 
-### Tweaks by default
+---
 
-We can now check and tweaks some settings that ship by default with windows 11 and should be tweaks for more FPS:
+## Windows 11 Default Tweaks
 
-In the Windows settings:
+Here are a few Windows 11 settings that should be adjusted for better gaming performance:
+
+### Windows Settings
 
 - **Core Isolation**: OFF
 
-In the Chris Titus Tech's Windows Utility:
+### Chris Titus Tech's Windows Utility
 
-- **Tweaks**: Standard or Minimal profile, in addition:
+- **Tweaks**: Use either the **Standard** or **Minimal** profile. Additionally, activate:
   - **Dark Theme for Windows**: ON
   - **Disable Microsoft Copilot**: ON
 
-> [!NOTE]
-> You can add more tweaks by activating more option to strip the system, take you time to read what each options do.
-
-
+> 💡 **Tip**: You can apply more tweaks to strip down unnecessary services and features from Windows. Take your time to read through each option to understand its impact.
