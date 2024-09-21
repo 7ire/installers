@@ -34,7 +34,8 @@ Start by updating your motherboard BIOS. Follow the manufacturer’s instruction
 
 In this section, I will list all the BIOS parameters that have been changed from their default values.
 
-> ⚠️ **Warning**: Some values might be universal across different manufacturers, but double-check each setting for your specific motherboard.
+> [!WARNING]
+> Some values might be universal across different manufacturers, but double-check each setting for your specific motherboard.
 
 ### AI Tweaker Settings
 
@@ -46,7 +47,8 @@ In this section, I will list all the BIOS parameters that have been changed from
 | Memory Context Restore           | Disabled                       |
 | UCLK DIV1 Mode                   | UCLK = MEMCLK                   |
 
-> 💡 **Tip**: Ensure your RAM speed is set to the maximum supported frequency.
+> [!TIP]
+> Ensure your RAM speed is set to the maximum supported frequency.
 
 ### DRAM Timing Control
 
@@ -78,9 +80,10 @@ In this section, I will list all the BIOS parameters that have been changed from
 | Power Supply Idle Control        | Typical Current Idle            |
 | CPPC Dynamic Preferred Cores     | Drivers (fix for 3D CPUs)       |
 
-> 💡 **Tip**: Disable any unnecessary apps in BIOS that may automatically download from Asus.
+> [!TIP]
+> Disable any unnecessary apps in BIOS that may automatically download from Asus.
 
-> 💾 **Save** the profile when you're done. The BIOS setup is complete!
+💾 **Save** the profile when you're done. The BIOS setup is complete!
 
 ---
 
@@ -88,7 +91,8 @@ In this section, I will list all the BIOS parameters that have been changed from
 
 To optimize your system, follow this [video guide](https://www.youtube.com/watch?v=92SM8Az5QVM) to create a clean and lightweight Windows ISO.
 
-> 💡 **Tip**: I recommend performing a standard Windows 11 installation first, installing necessary drivers, and then creating a custom ISO. Include your installed drivers in the custom ISO for convenience.
+> [!TIP]
+> I recommend performing a standard Windows 11 installation first, installing necessary drivers, and then creating a custom ISO. Include your installed drivers in the custom ISO for convenience.
 
 ### Steps Overview
 
@@ -106,7 +110,8 @@ irm "https://christitus.com/win" | iex
    - Set a system username and password.
 5. Create a bootable USB drive with the newly generated ISO.
 
-> 💡 **Tip**: When installing Windows 11, use the following locale settings:
+> [!TIP]
+> When installing Windows 11, use the following locale settings:
 >
 > - **Language**: English (United States) / International
 > - **Time and Currency Format**: English (United States)
@@ -128,4 +133,5 @@ Here are a few Windows 11 settings that should be adjusted for better gaming per
   - **Dark Theme for Windows**: ON
   - **Disable Microsoft Copilot**: ON
 
-> 💡 **Tip**: You can apply more tweaks to strip down unnecessary services and features from Windows. Take your time to read through each option to understand its impact.
+> [!TIP]
+> You can apply more tweaks to strip down unnecessary services and features from Windows. Take your time to read through each option to understand its impact.
