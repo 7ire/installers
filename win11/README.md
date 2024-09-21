@@ -15,8 +15,10 @@
 
 ### Additional Topics
 
-- Gaming Improvements
-- Other Customizations
+- [Guide for Amit's Timer Resolution (Better FPS Lows)](https://www.youtube.com/watch?v=AcCFZ8hhXi8)
+- [BEST Nvidia Control Panel Settings 2024 Explained](https://www.youtube.com/watch?v=6-62fFTcA1Y)
+- [Win32 Priority Separation Benchmarks](https://www.youtube.com/watch?v=wTdeyFk8Xv0)
+- [General PC optimization](https://www.youtube.com/watch?v=iBiNfa32AnE)
 
 ---
 
@@ -39,44 +41,44 @@ In this section, I will list all the BIOS parameters that have been changed from
 
 ### AI Tweaker Settings
 
-| **Setting**                     | **Value**                      |
-|----------------------------------|---------------------------------|
-| Ai Overlock Tuner                | DOCP II / EXPO II               |
+| **Setting**                      | **Value**                             |
+|----------------------------------|---------------------------------------|
+| Ai Overlock Tuner                | DOCP II / EXPO II                     |
 | FCLK Frequency                   | 1/3 of max RAM speed (e.g., 2000 MHz) |
-| Power Down Enable                | Disabled                       |
-| Memory Context Restore           | Disabled                       |
-| UCLK DIV1 Mode                   | UCLK = MEMCLK                   |
+| Power Down Enable                | Disabled                              |
+| Memory Context Restore           | Disabled                              |
+| UCLK DIV1 Mode                   | UCLK = MEMCLK                         |
 
 > [!TIP]
 > Ensure your RAM speed is set to the maximum supported frequency.
 
 ### DRAM Timing Control
 
-| **Setting**                     | **Value**                      |
+| **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
 | CPU Load-line Calibration        | Level 3 / Level 4 / Auto        |
-| CPU Current Capability           | 120%                           |
-| CPU Power Duty Control           | Extreme                        |
-| CPU Power Phase Control          | Extreme                        |
-| VDDSOC Current Capability        | 120%                           |
+| CPU Current Capability           | 120%                            |
+| CPU Power Duty Control           | Extreme                         |
+| CPU Power Phase Control          | Extreme                         |
+| VDDSOC Current Capability        | 120%                            |
 
 ### Advanced Settings
 
-| **Setting**                     | **Value**                      |
+| **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
-| Precision Boost Override         | Level 3 (80°C)                 |
-| Curve Optimizer                  | All cores, Negative, -20        |
-| SoC/Uncore OC Mode               | Enabled                        |
-| PSS Support                      | Disabled                       |
-| SVM Mode                         | Disabled                       |
-| Resize BAR Support               | Enabled                        |
+| Precision Boost Override         | Level 3 (80°C)                  |
+| Curve Optimizer                  | All cores, Negative, 20         |
+| SoC/Uncore OC Mode               | Enabled                         |
+| PSS Support                      | Disabled                        |
+| SVM Mode                         | Disabled                        |
+| Resize BAR Support               | Enabled                         |
 
 ### AMD CBS Settings
 
-| **Setting**                     | **Value**                      |
+| **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
-| Global C-State Control           | Disabled                       |
-| IOMMU                            | Disabled                       |
+| Global C-State Control           | Disabled                        |
+| IOMMU                            | Disabled                        |
 | Power Supply Idle Control        | Typical Current Idle            |
 | CPPC Dynamic Preferred Cores     | Drivers (fix for 3D CPUs)       |
 
@@ -133,5 +135,5 @@ Here are a few Windows 11 settings that should be adjusted for better gaming per
   - **Dark Theme for Windows**: ON
   - **Disable Microsoft Copilot**: ON
 
-> [!TIP]
+> [!NOTE]
 > You can apply more tweaks to strip down unnecessary services and features from Windows. Take your time to read through each option to understand its impact.
