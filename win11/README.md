@@ -78,3 +78,46 @@ Just follow this [guide](https://www.youtube.com/watch?v=92SM8Az5QVM) and you sh
 > [!TIP]
 > I suggest to make a standard Windows 11 installation and install only the necessary drivers.
 > When generating the custom optimized make sure to include the drivers installed, this will help to pack in the ISO also the hw drivers.
+
+In brief the steps are:
+
+1. Download the latest version of **Windows 11**
+2. Install Windows and do the basic configuration w/ drivers
+3. Use the **[Chris Titus Tech's Windows Utility](https://github.com/christitustech/winutil)**
+
+``` powershell
+irm "https://christitus.com/win" | iex
+```
+
+4. Create a MicroWin ISO with:
+
+  - Default MicroWin settings
+  - Include current system drivers
+  - System username e password
+5. Create a bootable USB with the ISO generated
+
+> [!TIP]
+> When installing Windows 11 use those parameters:
+>
+> - **English (United State) / International**
+> - **English (United State) / International**
+> - **US / International**
+
+### Tweaks by default
+
+We can now check and tweaks some settings that ship by default with windows 11 and should be tweaks for more FPS:
+
+In the Windows settings:
+
+- **Core Isolation**: OFF
+
+In the Chris Titus Tech's Windows Utility:
+
+- **Tweaks**: Standard or Minimal profile, in addition:
+  - **Dark Theme for Windows**: ON
+  - **Disable Microsoft Copilot**: ON
+
+> [!NOTE]
+> You can add more tweaks by activating more option to strip the system, take you time to read what each options do.
+
+
