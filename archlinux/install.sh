@@ -8,18 +8,112 @@
 #   /   |  |  -\   |   GitHub    | https://github.com/7ire                     |
 #  /_-''    ''-_\  |   Version   | 0.1.0                                       |
 # ------------------------------------------------------------------------------
-# Configuration parameters
 #
-# CONFIGURE THESE VARIABLES.
-# Each variable is divided in sections for each part of the installation.
+# Configuration Parameters
+#
+# Customize these variables according to your preferences 
+# to install the system as desired.
+# ==============================================================================
 #
 # System
-hostname="archlinux"  # Hostname
-
-# Locale
+#
+# This section defines essential system settings. 
+# Use the following helper commands or file paths to find available options 
+# for each parameter.
+# - 'lang': to list available locales, check /etc/locale.gen or run `locale -a`.
+# - 'timezone': to find your timezone, use the command `timedatectl list-timezones`.
+# - 'keyboard': to view available layouts, use `localectl list-keymaps`.
+hostname="archlinux"         # Hostname
 lang="en_US.UTF-8"           # Language
 timezone="America/New_York"  # Timezone
-keyboard="us"                # Keyboard layout
+keyboard="us"                # Keyboard
+#
+# Disk
+# - 'target': to list avaible disk, use the command `lsblk -f`.
+# - 'is_ssd': to know if the disk is type a SSD or an HDD. 
+# Option avaible `yes/no`.
+# (it this necessary to apply ssd optimization futher in the installation script)
+# 
+target="/dev/sda"         # Target disk
+is_ssd="no"               # Is SSD disk?
+
+#
+# Script body
+# DO NOT TOUCH or EDIT THIS CODE - You can do it but at your own risk!
+#
+# Utilities function(s)
+# ==============================================================================
+#
+# Output debug message with color
+print_debug() {
+  local color="$1"
+  local message="$2"
+  echo -e "\e[${color}m${message}\e[0m"
+}
+# Wrapper functions for specific colors
+print_success() { print_debug "32" "$1"; }  # Success (green)
+print_info() { print_debug "36" "$1";}      # Info (cyan)
+#
+# Checker
+#
+# This function checks if the script is being run with root privileges and 
+# if the system is in UEFI mode.
+# If either of these conditions is not met, the script terminates with 
+# an error message.
+checker() {
+  [ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }                     # Checks if the script is run as root, otherwise exits
+  [ -d /sys/firmware/efi/efivars ] || { echo "UEFI mode not detected. Aborting script."; exit 1; }  # Checks if the system is in UEFI mode, otherwise exits
+}
+#
+# Function(s)
+# ==============================================================================
+#
+# System Configuration
+#
+# This function configures essential system settings such as the hostname, 
+# locale, timezone, and keyboard layout.
+# It directly modifies system files to ensure that these settings are 
+# applied correctly.
+#
+# For more information on the values used for hostname, locale, timezone, 
+# and keyboard layout, refer to the 'System' section in the 
+# Configuration Parameters.
+sys_conf() {
+  # Set the system hostname
+  echo "$hostname" > /etc/hostname  
+  # Configure the /etc/hosts file for local hostname resolution
+cat > /etc/hosts << EOF
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   ${hostname}.localdomain ${hostname}
+EOF
+
+  # Uncomment the desired locale in /etc/locale.gen
+  sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen
+  # Set the system language/locale
+  echo "LANG=${lang}" > /etc/locale.conf
+  # Generate the locale configuration
+  locale-gen &> /dev/null
+
+  # Set the system timezone
+  ln -sf /usr/share/zoneinfo/"$timezone" /etc/localtime &> /dev/null
+  # Synchronize hardware clock with system clock
+  hwclock --systohc &> /dev/null
+
+  # Set the console keymap
+  echo "KEYMAP=${keyboard}" > /etc/vconsole.conf
+}
+
+
+
+
+
+
+
+
+
+
+
 
 # Disk
 target="/dev/sda"         # Target disk     -    'lsblk'
