@@ -28,7 +28,7 @@ In this section, I will list all the BIOS parameters that have been changed from
 > [!WARNING]
 > Some values might be universal across different manufacturers, but double-check each setting for your specific motherboard.
 
-### AI Tweaker Settings
+#### AI Tweaker Settings
 
 | **Setting**                      | **Value**                             |
 |----------------------------------|---------------------------------------|
@@ -41,7 +41,7 @@ In this section, I will list all the BIOS parameters that have been changed from
 > [!TIP]
 > Ensure your RAM speed is set to the maximum supported frequency.
 
-### DRAM Timing Control
+#### DRAM Timing Control
 
 | **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
@@ -51,7 +51,7 @@ In this section, I will list all the BIOS parameters that have been changed from
 | CPU Power Phase Control          | Extreme                         |
 | VDDSOC Current Capability        | 120%                            |
 
-### Advanced Settings
+#### Advanced Settings
 
 | **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
@@ -62,7 +62,7 @@ In this section, I will list all the BIOS parameters that have been changed from
 | SVM Mode                         | Disabled                        |
 | Resize BAR Support               | Enabled                         |
 
-### AMD CBS Settings
+#### AMD CBS Settings
 
 | **Setting**                      | **Value**                       |
 |----------------------------------|---------------------------------|
