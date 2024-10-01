@@ -91,17 +91,53 @@ btrfs_opts=(
 # Driver settings
 #
 # Defines the drivers to be installed for CPU and GPU.
+#
 # - cpu : Specifies the CPU driver to use (intel/amd).
 # - gpu : Specifies the GPU driver to use (intel/nvidia).
 cpu="intel"   # CPU driver selection
 gpu="nvidia"  # GPU driver selection
 
+# User settings
+#
+# Defines the root and user account credentials.
+#
+# - rootpwd  : Password for the root user.
+# - username : Name of the regular user.
+# - password : Password for the regular user.
+rootpwd="dummy"    # Root user password
+username="dummy"   # Regular user name
+password="dummy"   # Regular user password
 
+# User Extra settings
+#
+# Defines additional user preferences, services, and extra packages.
+#
+# - editor   : Default text editor (vim/nano).
+# - aur      : AUR helper to use (paru/yay).
+editor="vim"    # Default text editor
+aur="paru"      # AUR helper
+# Service settings
+#
+# - ssh       : Enable SSH service (yes/no).
+# - bluetooth : Enable Bluetooth service (yes/no).
+# - printer   : Enable Printer service (yes/no).
+ssh="yes"       # Enable SSH service
+bluetooth="no"  # Enable Bluetooth service
+printer="no"    # Enable Printer service
+# Extra packages
+#
+# Specifies additional packages to install.
+pkgs=(          
+  bash-completion  # Bash auto-completion
+  man-db           # Man page database
+  man-pages        # Manual pages
+  git              # Git version control
+  curl             # Data transfer utility
+  wget             # Network downloader
+  rsync            # File synchronization tool
+)
 
-# User
-rootpwd="dummy"   # Root password
-username="dummy"  # Username
-password="dummy"  # Password
+# Desktop Environment settings
 
 # ^-^-^-^-^-^-^-^        End of Configuration Parameters         ^-^-^-^-^-^-^-^
 
@@ -127,9 +163,14 @@ BASE="base base-devel git"                        ## Base system pkg(s)
 CPU="${cpu}-ucode"                                ## CPU driver
 BOOTLOADER="grub efibootmgr os-prober"            ## Bootloader
 NETWORK="networkmanager"                          ## Network
-CRYPT="cryptsetup lvm2"                           ## Encryption
-EXTRA="vim"                                       ## Extra pkg(s)
+CRYPT="cryptsetup"                                ## Encryption
+EXTRA="sudo"                                      ## Extra pkg(s)
+# if encrypt is enabled and part2_fs is not btrfs, add lvm2 to the base system packages
+[ "$encrypt" = "yes" ] && [ "$part2_fs" != "btrfs" ] && CRYPT+=" lvm2"  # Add LVM2 package
+# if part2_fs is btrfs, add btrfs-progs to the base system packages
+[ "$part2_fs" = "btrfs" ] && EXTRA+=" btrfs-progs"  # Add Btrfs package
 # Desktop Enviroment package(s)
+USR_EXT_PKGS=$(IFS=" "; echo "${pkgs[*]}")         ## Extra pkg(s)
 
 
 # Utilities function(s)
@@ -190,27 +231,22 @@ preparation() {
 # Function(s)
 # ==============================================================================
 
-# Pacman Configuration
+# Package Manager Configuration
 #
-# This function configures the Pacman package manager to improve user experience 
-# and system maintenance. It enables parallel downloads in `/etc/pacman.conf`, 
-# allowing multiple packages to be downloaded simultaneously for faster updates. 
-# It also enables color output for better readability and adds the "ILoveCandy" option 
-# to enhance the visual output with a more playful appearance. 
-# Additionally, the function installs the `pacman-contrib` package, which includes 
-# useful tools for Pacman, and enables the `paccache.timer` service to automatically 
-# clean old package caches, helping to free up disk space and keep the system tidy.
+# Configures Pacman for parallel downloads, color output, and enables automatic cache cleaning.
 pacman_conf() {
-  # Configure pacman 
-  sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf  # Enable parallel downloads
-  sed -i 's/^#Color/Color/' /etc/pacman.conf                          # Enable color output
-  sed -i '/^Color/a ILoveCandy' /etc/pacman.conf                      # Enable fancy output
-  # Paccache
-  pacman -S --noconfirm pacman-contrib &> /dev/null                   # Install 'pacman-contrib' pkg
-  systemctl enable paccache.timer &> /dev/null                        # Enable the cache cleaner service
-  # Server repository(s)
-  sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf            # Enable multilib repository
-  pacman -Syy &> /dev/null                                            # Refresh the package database(s)
+  # Enable parallel downloads and color output in pacman
+  sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
+  sed -i 's/^#Color/Color/' /etc/pacman.conf
+  sed -i '/^Color/a ILoveCandy' /etc/pacman.conf  # Add playful visual effect
+
+  # Install pacman-contrib and enable automatic cache cleaning
+  pacman -S --noconfirm pacman-contrib &> /dev/null
+  systemctl enable paccache.timer &> /dev/null
+
+  # Enable multilib repository and refresh package database
+  sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf
+  pacman -Syy &> /dev/null
 }
 
 # Disk formatting
@@ -296,14 +332,14 @@ disk_formatting() {
   mount ${target_part}1 /mnt/$part1_mount
 }
 
-
-gnome() {}
-
-# Bootloader Configuration
+# Bootloader
+#
+# Configures and installs the GRUB bootloader, including encryption support if enabled.
 bootloader() {
-  cp /etc/default/grub /etc/default/grub.backup  # Backup current GRUB configuration
+  # Backup current GRUB configuration
+  cp /etc/default/grub /etc/default/grub.backup
 
-  # Modify GRUB default settings
+  # Update GRUB settings
   sed -i "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=30/" /etc/default/grub
   sed -i "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/" /etc/default/grub
   sed -i "s/^#GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=y/" /etc/default/grub
@@ -311,57 +347,75 @@ bootloader() {
   sed -i "s/^#GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/" /etc/default/grub
 
   if [ "$encrypt" = "yes" ]; then
-    uuid=$(blkid -s UUID -o value ${target_part}2)  # Determine UUID of the encrypted partition
+    # Get UUID of the encrypted partition
+    uuid=$(blkid -s UUID -o value ${target_part}2)
 
-    # Modify GRUB configuration for encrypted disk
+    # Update GRUB for encrypted disk
     sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet cryptdevice=UUID=$uuid:cryptdev\"/" /etc/default/grub
     sed -i "s/^GRUB_PRELOAD_MODULES=.*/GRUB_PRELOAD_MODULES=\"part_gpt part_msdos luks\"/" /etc/default/grub
     sed -i "s/^#GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub
   fi
 
-  # Install GRUB to the EFI system partition
+  # Install GRUB to EFI partition
   grub-install --target=x86_64-efi --efi-directory=/${part1_mount} --bootloader-id=GRUB --modules="tpm" --disable-shim-lock
-  grub-mkconfig -o /boot/grub/grub.cfg       # Generate GRUB configuration file
-  sbctl create-keys && sbctl enroll-keys -m  # Create and enroll signing keys
-  # Sign the necessary files
+  grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
+
+  # Create and enroll secure boot keys
+  sbctl create-keys && sbctl enroll-keys -m
+
+  # Sign necessary boot files
   sbctl sign -s /boot/EFI/GRUB/grubx64.efi \
             -s /boot/grub/x86_64-efi/core.efi \
             -s /boot/grub/x86_64-efi/grub.efi \
             -s /boot/vmlinuz-linux-zen
 }
 
-# Kernel modules Configuration
-init_ramdisk() {}
+# Initial Ramdisk Configuration
+#
+# Configures kernel modules and initial ramdisk, including encryption and filesystem setup.
+init_ramdisk() {
+  if [ "$encrypt" = "yes" ]; then
+    # Generate keyfile for LUKS encryption
+    dd bs=512 count=4 iflag=fullblock if=/dev/random of=/key.bin &> /dev/null
+    chmod 600 /key.bin &> /dev/null  # Restrict keyfile access
+    cryptsetup luksAddKey "${target_part}2" /key.bin &> /dev/null  # Add keyfile to LUKS
+  fi
 
-# Service(s) Configuration
+  # Include btrfs module if btrfs is used
+  if [ "$part2_fs" = "btrfs" ]; then
+    sed -i '/^MODULES=/ s/)/ btrfs)/' /etc/mkinitcpio.conf &> /dev/null
+  fi
+
+  # Configure hooks based on encryption and filesystem
+  if [ "$is_enc" = "True" ]; then
+    sed -i '/^FILES=/ s/)/ \/key.bin)/' /etc/mkinitcpio.conf &> /dev/null  # Add keyfile to mkinitcpio
+
+    if [ "$part2_fs" = "btrfs" ]; then
+      # Hooks for encryption and btrfs
+      sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block encrypt btrfs filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
+    else
+      # Hooks for encryption without btrfs
+      sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
+    fi
+  else
+    # Hooks without encryption
+    sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
+  fi
+
+  # Generate the initial ramdisk
+  mkinitcpio -P &> /dev/null
+}
+
+# Base Services Configuration
 #
-# This function configures essential system services for network management, 
-# SSH access, mirrorlist updates, firewall setup, and kernel network parameters. 
-# It installs and enables the OpenSSH server to allow remote access via SSH. 
-# NetworkManager is enabled to manage network connections, including waiting 
-# for the network to be fully online at boot. 
-# The Reflector service is configured to periodically update the system's 
-# mirrorlist by selecting the fastest mirrors based on the country and connection speed. 
-# The firewall is configured using nftables, which includes a default ruleset for basic security, 
-# such as dropping invalid connections and allowing ICMP traffic. 
-# Kernel network parameters are adjusted to disable IP forwarding, prevent ICMP redirects, 
-# and enable SYN flood protection.
-#
-# If the system uses an SSD, the `fstrim.timer` service is enabled to periodically 
-# run the `fstrim` command, optimizing SSD performance.
-#
-# For more information on the values used for services like Reflector or SSD detection, 
-# refer to the 'Disk' section in the Configuration Parameters.
+# Configures essential system services for network management, SSH, mirrorlist updates, 
+# firewall setup, and kernel network parameters. Enables fstrim for SSDs if detected.
 serv_conf() {
-  # SSH
-  pacman -S --noconfirm openssh &> /dev/null
-  systemctl enable sshd.service &> /dev/null
-
-  # NetworkManager
+  # Enable NetworkManager
   systemctl enable NetworkManager.service &> /dev/null
   systemctl enable NetworkManager-wait-online.service &> /dev/null
 
-  # Reflector
+  # Configure and enable Reflector for mirrorlist updates
   pacman -S --noconfirm reflector &> /dev/null
   cat > /etc/xdg/reflector/reflector.conf <<EOF
 --country "${reflector_countries}"
@@ -373,7 +427,7 @@ EOF
   systemctl enable reflector.service &> /dev/null
   systemctl enable reflector.timer &> /dev/null
 
-  # Firewall
+  # Configure nftables firewall and enable the service
   pacman -S --noconfirm nftables &> /dev/null
   NFTABLES_CONF="/etc/nftables.conf"
   bash -c "cat << EOF > $NFTABLES_CONF
@@ -386,11 +440,11 @@ table inet filter {
     type filter hook input priority filter
     policy drop
 
-    ct state invalid drop comment 'early drop of invalid connections'
-    ct state {established, related} accept comment 'allow tracked connections'
-    iifname lo accept comment 'allow from loopback'
-    ip protocol icmp accept comment 'allow icmp'
-    meta l4proto ipv6-icmp accept comment 'allow icmp v6'
+    ct state invalid drop comment 'drop invalid connections'
+    ct state {established, related} accept comment 'allow established connections'
+    iifname lo accept comment 'allow loopback'
+    ip protocol icmp accept comment 'allow ICMP'
+    meta l4proto ipv6-icmp accept comment 'allow ICMPv6'
     pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
     counter
   }
@@ -403,18 +457,17 @@ table inet filter {
 EOF"
   systemctl enable --now nftables &> /dev/null
 
-  # Kernel parameters
-  SYSCTL_CONF="/etc/sysctl.d/90-network.conf"  # sysctl configuration file
-  # Create or overwrite the sysctl configuration file with the specified parameters
+  # Apply kernel network parameters
+  SYSCTL_CONF="/etc/sysctl.d/90-network.conf"
   bash -c "cat << EOF > $SYSCTL_CONF
-# Do not act as a router
+# Disable IP forwarding
 net.ipv4.ip_forward = 0
 net.ipv6.conf.all.forwarding = 0
 
-# SYN flood protection
+# Enable SYN flood protection
 net.ipv4.tcp_syncookies = 1
 
-# Disable ICMP redirect
+# Disable ICMP redirects
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.all.secure_redirects = 0
@@ -426,9 +479,9 @@ net.ipv6.conf.default.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
 net.ipv4.conf.default.send_redirects = 0
 EOF"
-  sysctl --system &> /dev/null  # Load the new sysctl settings
+  sysctl --system &> /dev/null  # Apply sysctl settings
 
-  # SSD improvements
+  # Enable fstrim for SSDs
   if [ "is_ssd" = "yes" ]; then
     pacman -S --noconfirm util-linux &> /dev/null
     systemctl enable --now fstrim.timer &> /dev/null
@@ -437,37 +490,30 @@ EOF"
 
 # System Configuration
 #
-# This function configures essential system settings such as the hostname, 
-# locale, timezone, and keyboard layout.
-# It directly modifies system files to ensure that these settings are 
-# applied correctly.
-#
-# For more information on the values used for hostname, locale, timezone, 
-# and keyboard layout, refer to the 'System' section in the 
-# Configuration Parameters.
+# Configures essential system settings like hostname, locale, timezone, and keyboard layout.
 sys_conf() {
-  # Set the system hostname
-  echo "$hostname" > /etc/hostname  
-  # Configure the /etc/hosts file for local hostname resolution
-cat > /etc/hosts << EOF
+  # Set system hostname
+  echo "$hostname" > /etc/hostname
+
+  # Configure /etc/hosts for local hostname resolution
+  cat > /etc/hosts << EOF
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   ${hostname}.localdomain ${hostname}
 EOF
 
-  # Uncomment the desired locale in /etc/locale.gen
+  # Enable the desired locale in /etc/locale.gen
   sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen
-  # Set the system language/locale
-  echo "LANG=${lang}" > /etc/locale.conf
-  # Generate the locale configuration
-  locale-gen &> /dev/null
 
-  # Set the system timezone
+  # Set system language/locale
+  echo "LANG=${lang}" > /etc/locale.conf
+  locale-gen &> /dev/null  # Generate locale
+
+  # Set system timezone and sync hardware clock
   ln -sf /usr/share/zoneinfo/"$timezone" /etc/localtime &> /dev/null
-  # Synchronize hardware clock with system clock
   hwclock --systohc &> /dev/null
 
-  # Set the console keymap
+  # Set console keymap
   echo "KEYMAP=${keyboard}" > /etc/vconsole.conf
 }
 
@@ -482,24 +528,109 @@ sys_installation() {
   genfstab -U -p /mnt >> /mnt/etc/fstab &> /dev/null
 }
 
-
 # User Configuration
 #
-# This function configures the root and user accounts for the system. 
-# It sets the root password by passing the provided password to the `chpasswd` command.
-# A new user is then created with the specified username, assigned to the `wheel` group 
-# to grant administrative privileges, and given the Bash shell as the default login shell. 
-# The password for the new user is also set using the `chpasswd` command. 
-# Finally, it modifies the `/etc/sudoers` file to allow members of the `wheel` group to 
-# execute any command using `sudo`, enabling administrative access for the new user.
-#
-# For more information on the values used for rootpwd, username, and password, 
-# refer to the 'User' section in the Configuration Parameters.
+# Configures the root and user accounts, sets passwords, and grants sudo access to the user.
 user_conf() {
-  echo "root:$rootpwd" | chpasswd &> /dev/null                                               # Set the root password
-  useradd -m -G wheel -s /bin/bash "$username" &> /dev/null                                  # Add a new user and assign to 'wheel' group with bash shell
-  echo "$username:$password" | chpasswd &> /dev/null                                         # Set password for the new user
-  sed -i "s/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers &> /dev/null  # Enable 'wheel' group users to use sudo
+  # Set root password
+  echo "root:$rootpwd" | chpasswd &> /dev/null
+
+  # Add new user, assign to 'wheel' group, and set Bash as default shell
+  useradd -m -G wheel -s /bin/bash "$username" &> /dev/null
+  
+  # Set user password
+  echo "$username:$password" | chpasswd &> /dev/null
+  
+  # Enable sudo for 'wheel' group
+  sed -i "s/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers &> /dev/null
+}
+
+# (User) Bluetooth Configuration
+#
+# Install Bluetooth packages and configures Bluetooth settings.
+usr_blth() {
+  # Install Bluetooth packages
+  sudo pacman -S --noconfirm bluez bluez-utils bluez-tools &> /dev/null
+
+  BLUETOOTH_CONF="/etc/bluetooth/main.conf"
+
+  # Ensure ControllerMode is set to 'dual'
+  if grep -q "^#*ControllerMode = dual" "$BLUETOOTH_CONF"; then
+    sudo sed -i 's/^#*ControllerMode = dual/ControllerMode = dual/' "$BLUETOOTH_CONF"
+  else
+    echo "ControllerMode = dual" | sudo tee -a "$BLUETOOTH_CONF" > /dev/null
+  fi
+
+  # Ensure [General] section contains Experimental = true
+  if grep -q "^\[General\]" "$BLUETOOTH_CONF"; then
+    if grep -q "^#*Experimental = false" "$BLUETOOTH_CONF"; then
+      sudo sed -i 's/^#*Experimental = false/Experimental = true/' "$BLUETOOTH_CONF"
+    elif ! grep -q "^Experimental = true" "$BLUETOOTH_CONF"; then
+      sudo sed -i '/^\[General\]/a Experimental = true' "$BLUETOOTH_CONF"
+    fi
+  else
+    echo -e "\n[General]\nExperimental = true" | sudo tee -a "$BLUETOOTH_CONF" > /dev/null
+  fi
+
+  # Enable and start Bluetooth service
+  sudo systemctl enable bluetooth.service &> /dev/null
+}
+
+# (User) SSH Configuration
+#
+# Installs and enables the OpenSSH service.
+usr_ssh() {
+  # Install OpenSSH
+  sudo pacman -S --noconfirm openssh &> /dev/null
+
+  # Enable SSH service
+  sudo systemctl enable sshd.service &> /dev/null
+}
+
+# (User) Printer Configuration
+#
+# Installs and enables printing services, including CUPS and Bluetooth printing support.
+usr_printer() {
+  # Install CUPS and related packages
+  sudo pacman -S --noconfirm cups cups-pdf bluez-cups &> /dev/null
+
+  # Enable CUPS service
+  sudo systemctl enable cups.service &> /dev/null
+}
+
+# (User) Extra Configuration
+#
+# Installs extra user packages, sets default editor, and optionally installs AUR helper, SSH, Bluetooth, and printer support.
+user_extra() {
+  # Install and set the default editor
+  sudo pacman -S --noconfirm $editor &> /dev/null
+  sudo echo "EDITOR=${editor}" > /etc/environment
+  sudo echo "VISUAL=${editor}" >> /etc/environment
+
+  # Install additional packages
+  sudo pacman -S --noconfirm $USR_EXT_PKGS &> /dev/null
+
+  # Install AUR helper (paru or yay)
+  if [ "$aur" = "paru" ]; then
+    git clone https://aur.archlinux.org/paru.git /tmp/paru &> /dev/null
+    cd /tmp/paru
+    makepkg -si --noconfirm &> /dev/null
+    cd - && rm -rf /tmp/paru
+    sudo pacman -Syyu --noconfirm &> /dev/null
+    paru -Syyu --noconfirm &> /dev/null
+  elif [ "$aur" = "yay" ]; then
+    git clone https://aur.archlinux.org/yay.git /tmp/yay &> /dev/null
+    cd /tmp/yay
+    makepkg -si --noconfirm &> /dev/null
+    cd - && rm -rf /tmp/yay
+    sudo pacman -Syyu --noconfirm &> /dev/null
+    yay -Syyu --noconfirm &> /dev/null
+  fi
+
+  # Install and enable optional services
+  [ "$ssh" = "yes" ] && usr_ssh
+  [ "$bluetooth" = "yes" ] && usr_blth
+  [ "$printer" = "yes" ] && usr_printer
 }
 
 
@@ -523,39 +654,38 @@ print_info "[*] CHRooting into the new system ..."
 arch-chroot /mnt /bin/bash
 print_success "[+] CHRooted into the new system!"
 
+print_info "[*] Configuring the system ..."
+sys_conf
+print_success "[+] System configuration completed!"
 
+print_info "[*] Configuring system root user and local user ..."
+user_conf
+print_success "[+] User(s) configuration completed!"
+
+print_info "[*] Configuring the pacman manager ..."
+pacman_conf
+print_success "[+] Pacman manager configuration completed!"
+
+print_info "[*] Configuring base services ..."
+serv_conf
+print_success "[+] Base services configuration completed!"
+
+print_info "[*] Configuring initial ramdisk ..."
+init_ramdisk
+print_success "[+] Initial ramdisk configuration completed!"
+
+print_info "[*] Configuring the bootloader ..."
+bootloader
+print_success "[+] Bootloader configuration completed!"
+
+print_info "[*] User extra configuration ..."
+su $username
+user_extra
+exit
+print_success "[+] User extra configuration completed!"
+
+exit
+print_success "[+] Installation completed successfully!"
+reboot -now
 
 # ^-^-^-^-^-^-^-^-^-^        End of Script Core          ^-^-^-^-^-^-^-^-^-^-^-^
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# User experience
-de="gnome"     # Desktop environment - (gnome/kde)
-use_wm="no"    # Use window manager? - (yes/no)
-wm="hyprland"  # Window manager      - (hyprlad/dwm)
-
-# ------------------------------------------------------------------------------
-
-# Script body
-# =====================================
-chekcer
-print_success "The system is ready for installation."
-
-print_info "[0]. Preparing the system for installation..."
-preparation
-print_success "[0]. The system is ready for installation."
-
-print_info "[1]. Formatting the target disk..."
-disk
-print_success "[1]. The target disk has been formatted."
