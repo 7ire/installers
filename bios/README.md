@@ -15,7 +15,7 @@
 
 ### Getting Started: BIOS Update
 
-Start by updating your motherboard BIOS. Follow the manufacturer’s instructions carefully. Here are some resources for the **Asus B650E-F** motherboard:
+Start by updating your motherboard BIOS. Follow the manufacturer’s instructions carefully:
 
 - [BIOS Download](https://rog.asus.com/it/motherboards/rog-strix/rog-strix-b650e-f-gaming-wifi-model/helpdesk_bios/)
 - [Ez Flash Guide](https://www.youtube.com/watch?v=Em7SRaG3L_0)
