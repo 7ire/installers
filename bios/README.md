@@ -1,14 +1,19 @@
 # BIOS Tweaking
 
-**TL;DR**: Resources used to create this guide:
+## Asus B650E-F
 
-### BIOS Tweak Resources
+> [!NOTE]
+> TL;DR**: Resources used to create this guide:
+
+**BIOS Tweak Resources**:
 
 - [BIOS Settings for 7950x3D and 7800x3D on Asus Rog Strix B650E-F](https://www.youtube.com/watch?v=kqAsNB5xCVI)
 - [Undervolting Ryzen 7 7800X3D for More FPS and Lower Temperatures](https://www.youtube.com/watch?v=BNAs3bl-yv0)
 - [Fixing AMD Core-Parking Problems](https://www.youtube.com/watch?v=4wdQpVcL_a4)
 
-## Getting Started: BIOS Update
+---
+
+### Getting Started: BIOS Update
 
 Start by updating your motherboard BIOS. Follow the manufacturer’s instructions carefully. Here are some resources for the **Asus B650E-F** motherboard:
 
@@ -16,9 +21,7 @@ Start by updating your motherboard BIOS. Follow the manufacturer’s instruction
 - [Ez Flash Guide](https://www.youtube.com/watch?v=Em7SRaG3L_0)
 - [BIOS Flashback Guide](https://www.youtube.com/watch?v=FPyElZcsW6o)
 
----
-
-## BIOS Tweaks
+### BIOS Tweaks
 
 In this section, I will list all the BIOS parameters that have been changed from their default values.
 
