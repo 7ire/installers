@@ -15,87 +15,88 @@
 # to install the system as desired.
 # ==============================================================================
 
-# Preparation
+# Preparation settings for installation
 #
-# This section defines preparation settings for the installation, particularly for 
-# optimizing package downloads by selecting the fastest mirrors using Reflector.
-# Use the following command to assist in choosing appropriate countries.
+# Optimizes package downloads by selecting the fastest mirrors using Reflector.
 #
-# - 'reflector_countries': Set the countries from which to fetch the fastest mirrors.
-#   To view available countries, you can run the command `reflector --list-countries`.
-reflector_countries="Italy,Germany,France"  # Countries for mirror selection
+# - reflector_countries: Countries used to fetch the fastest mirrors.
+#   To list available countries, use `reflector --list-countries`.
+reflector_countries="Italy,Germany,France"  # Selected countries for mirror optimization
 
-# System
+# System settings
 #
-# This section defines essential system settings. 
-# Use the following helper commands or file paths to find available options 
-# for each parameter.
+# Defines essential system configuration options.
 #
-# - 'lang'    : List available locales, check /etc/locale.gen or run `locale -a`.
-# - 'timezone': Find your timezone, use the command `timedatectl list-timezones`.
-# - 'keyboard': View available layouts, use `localectl list-keymaps`.
-hostname="archlinux"         # Hostname
-lang="en_US.UTF-8"           # Language
-timezone="America/New_York"  # Timezone
-keyboard="us"                # Keyboard
+# - hostname : Sets the system hostname.
+# - lang     : System language, available locales can be listed with `locale -a` or found in /etc/locale.gen.
+# - timezone : Set the timezone. Use `timedatectl list-timezones` to view available options.
+# - keyboard : Keyboard layout. List available layouts with `localectl list-keymaps`.
+hostname="archlinux"         # System hostname
+lang="en_US.UTF-8"           # Locale for system language
+timezone="America/New_York"  # System timezone
+keyboard="us"                # Keyboard layout
 
-# Disk
+# Disk settings
 #
-# This section defines the disk formatting parameters, including partitioning, encryption, 
-# and filesystem setup. Use the following helper commands to assist in selecting values 
-# for each parameter.
+# Defines disk partitioning, encryption, and filesystem setup.
 #
-# - 'target': List avaible disk, use the command `lsblk -f`.
-# - 'is_ssd': Know if the disk is type a SSD or an HDD. 
-# Option avaible `yes/no`.
-# (it this necessary to apply ssd optimization futher in the installation script)
-#
-# - 'encrypt'      : Encrypt the disk. Option avaible `yes/no`.
-# - 'encrypt_type' : Choose the encryption type. Option avaible `luks/luks2`.
-# - 'encrypt_key'  : Set the encryption key.
-# - 'encrypt_label': Set the encryption device label.
-#
-# - 'part1_size' : Set the EFI partition size.
-# - 'part1_mount': Set the mount point for the EFI partition.
-# - 'part1_label': set the partition label for the EFI partition (use uppercase).
-#
-# - 'part2_fs'   : Set the filesystem type for the root partition.
-# - 'part2_label': Set the partition label for the root partition.
-#
-# - 'btrfs_subvols'      : Set the Btrfs subvolumes.
-# - 'btrfs_subvols_mount': Set the Btrfs subvolumes mount points.
-# - 'btrfs_opts'         : Set the Btrfs mount options.
+# - target        : Target disk. Use `lsblk -f` to list available disks.
+# - is_ssd        : Specifies if the disk is an SSD (yes/no). Used for SSD optimization later.
+# - encrypt       : Encrypt the disk (yes/no).
+# - encrypt_type  : Encryption type (luks/luks2).
+# - encrypt_key   : Encryption key.
+# - encrypt_label : Label for the encrypted device.
+# - part1_size    : Size of the EFI partition.
+# - part1_mount   : Mount point for the EFI partition.
+# - part1_label   : Label for the EFI partition (use uppercase).
+# - part2_fs      : Filesystem type for the root partition.
+# - part2_label   : Label for the root partition.
+# - btrfs_subvols : Btrfs subvolumes.
+# - btrfs_subvols_mount: Mount points for the Btrfs subvolumes.
+# - btrfs_opts    : Mount options for Btrfs.
 target="/dev/sda"         # Target disk
-is_ssd="no"               # Is SSD disk?
-encrypt="no"              # Encrypt disk?
-encrypt_type="luks2"      # Encryption type
+is_ssd="no"               # Is the disk an SSD?
+encrypt="no"              # Enable disk encryption?
+encrypt_type="luks2"      # Type of encryption
 encrypt_key="changeme"    # Encryption key
-encrypt_label="cryptdev"  # Encryption device label
+encrypt_label="cryptdev"  # Label for the encrypted device
 part1_size="512MiB"       # EFI partition size
-part1_mount="esp"         # Mount point
-part1_label="ESP"         # Partition label
-part2_fs="ext4"           # Filesystem type
-part2_label="archlinux"   # Partition label
-btrfs_subvols=(           # Btrfs subvolumes
+part1_mount="esp"         # EFI partition mount point
+part1_label="ESP"         # Label for the EFI partition
+part2_fs="ext4"           # Filesystem type for the root partition
+part2_label="archlinux"   # Label for the root partition
+# Btrfs subvolumes and their mount points
+btrfs_subvols=(           
   "libvirt"
   "docker"
   "flatpak"
   "distrobox"
   "containers"
 )
-btrfs_subvols_mount=(     # Btrfs subvolumes mount points
+btrfs_subvols_mount=(     
   "/var/lib/libvirt"
   "/var/lib/docker"
   "/var/lib/flatpak"
   "/var/lib/distrobox"
   "/var/lib/containers"
 )
-btrfs_opts=(              # Btrfs mount options
+# Btrfs mount options
+btrfs_opts=(              
   "rw"
   "noatime"
   "compress-force=zstd:1"
   "space_cache=v2"
 )
+
+# Driver settings
+#
+# Defines the drivers to be installed for CPU and GPU.
+# - cpu : Specifies the CPU driver to use (intel/amd).
+# - gpu : Specifies the GPU driver to use (intel/nvidia).
+cpu="intel"   # CPU driver selection
+gpu="nvidia"  # GPU driver selection
+
+
 
 # User
 rootpwd="dummy"   # Root password
@@ -123,6 +124,7 @@ BTRFS_SV_OPTS=$(IFS=,; echo "${btrfs_opts[*]}")   ## Btrfs mount option(s)
 # Base system package(s)
 LNX="linux-zen linux-zen-headers linux-firmware"  ## Base linux pkg(s)
 BASE="base base-devel git"                        ## Base system pkg(s)
+CPU="${cpu}-ucode"                                ## CPU driver
 BOOTLOADER="grub efibootmgr os-prober"            ## Bootloader
 NETWORK="networkmanager"                          ## Network
 CRYPT="cryptsetup lvm2"                           ## Encryption
@@ -145,51 +147,43 @@ print_info() { print_debug "36" "$1";}      # Info (cyan)
 
 # Checker
 #
-# This function checks if the script is being run with root privileges and 
-# if the system is in UEFI mode.
-# If either of these conditions is not met, the script terminates with 
-# an error message.
+# Checks if the script is run with root privileges and if the system is in UEFI mode.
+# If either condition fails, the script exits with an error message.
 checker() {
-  # Checks if the script is run as root, otherwise exits
+  # Check for root privileges
   [ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }
-  # Checks if the system is in UEFI mode, otherwise exits
+  
+  # Check if the system is in UEFI mode
   [ -d /sys/firmware/efi/efivars ] || { echo "UEFI mode not detected. Aborting script."; exit 1; }
 }
 
 # Preparation
 #
-# This function prepares the system for installation by setting the keyboard layout,
-# enabling NTP, updating the mirrorlist, and refreshing the package database(s).
-# It also updates the Arch Linux keyring to ensure that package installations succeed.
-#
-# For more information on the values used for keyboard and reflector_countries, refer 
-# to the 'Preparation' and 'System' sections in the Configuration Parameters.
+# Prepares the machine for installation by setting the keyboard layout, enabling NTP, 
+# updating the mirrorlist, and refreshing the package database. Also updates the 
+# Arch Linux keyring for successful package installations.
 preparation() {
-  # Base preparation tasks
-  loadkeys $keyboard  ## Set the keyboard layout
-  ## Enable NTP (Network Time Protocol) for automatic time synchronization
+  # Set keyboard layout
+  loadkeys $keyboard
+
+  # Enable NTP for time synchronization
   timedatectl set-ntp true &> /dev/null
 
-  # Mirrorlist configuration
-  pacman -Syy &> /dev/null  ## Refresh the package database(s)
-  ## Backup the current mirrorlist before updating
-  cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-  ## Update the mirrorlist using Reflector to find the fastest mirrors from specified countries
+  # Update mirrorlist and refresh package databases
+  pacman -Syy &> /dev/null
+  cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup  # Backup mirrorlist
   reflector --country "${reflector_countries}" \
             --protocol https \
             --age 6 \
             --sort rate \
             --save /etc/pacman.d/mirrorlist &> /dev/null
 
-  # Configure package manager
-  ## Enable parallel downloads in pacman configuration
+  # Enable parallel downloads and update keyring
   sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf 
-  pacman -Syy &> /dev/null  ## Refresh the package database(s)
-  ## Update the Arch Linux keyring to avoid issues with package signing
+  pacman -Syy &> /dev/null
   pacman -S --noconfirm archlinux-keyring &> /dev/null
-  ## Initialize the pacman keyring for verifying package signatures
   pacman-key --init &> /dev/null
-  pacman -Syy &> /dev/null  ## Refresh the package database(s)
+  pacman -Syy &> /dev/null
 }
 
 
@@ -219,92 +213,71 @@ pacman_conf() {
   pacman -Syy &> /dev/null                                            # Refresh the package database(s)
 }
 
-# Disk Configuration
+# Disk formatting
 #
-# This function configures the target disk for installation by performing disk wiping,
-# partitioning, optional encryption, and formatting. It also handles the setup of
-# Btrfs subvolumes for advanced filesystem management.
-#
-# - If the target disk is an NVMe device, the function adjusts the naming scheme by appending 'p'
-#   to ensure proper partitioning.
-# - The disk is wiped to ensure no previous data interferes, and it is partitioned into
-#   two main parts: the EFI system partition (ESP) and the root partition.
-# - The root partition can be optionally encrypted using LUKS if encryption is enabled.
-# - The function supports both Btrfs and EXT4 filesystems:
-#   - For Btrfs, multiple subvolumes are created to segregate system and user data.
-#   - For EXT4, a single partition is used without subvolumes.
-# - The EFI partition is always formatted as FAT32 and mounted to the specified location.
-# 
-# For more information on encryption options, partition sizes, and subvolume configuration,
-# refer to the 'Disk Configuration' section in the Configuration Parameters.
+# Configures the target disk by wiping, partitioning, optional encryption, and formatting.
+# Supports both Btrfs (with subvolumes) and EXT4 filesystems. Handles the EFI partition setup.
 disk_formatting() {
-  umount -A --recursive /mnt  # Make sure everything is unmounted before we start
+  umount -A --recursive /mnt  # Ensure everything is unmounted
 
-  # Wipe data on the target disk
-  wipefs -af "$target"                             # Wipe data from target disk
-  sgdisk --zap-all --clear "$target" &> /dev/null  # Clear partition table from target disk
-  sgdisk -a 2048 -o "$target" &> /dev/null         # Align target disk to 2048 sectors
-  partprobe "$target" &> /dev/null                 # Update target disk info(s) and inform system
+  # Wipe the target disk
+  wipefs -af "$target"                             # Wipe all data
+  sgdisk --zap-all --clear "$target" &> /dev/null  # Clear partition table
+  sgdisk -a 2048 -o "$target" &> /dev/null         # Align sectors to 2048
+  partprobe "$target" &> /dev/null                 # Inform system of disk changes
 
-  # Fill target disk w/ random datas (security measure)
+  # Fill disk with random data for security
   cryptsetup open --type plain -d /dev/urandom $target target &> /dev/null
   dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev/null
   cryptsetup close target
 
   # Partition the target disk
-  sgdisk -n 0:0:+${part1_size} -t 0:ef00 -c 0:ESP $target &> /dev/null  # Partition 1: EFI System Partition
-  sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null            # Partition 2: Root Partition (non-encrypted)
-  partprobe "$target" &> /dev/null                                      # Update target disk info(s) and inform system
+  sgdisk -n 0:0:+${part1_size} -t 0:ef00 -c 0:ESP $target &> /dev/null  # EFI partition
+  sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null            # Root partition
+  partprobe "$target" &> /dev/null                                      # Update partition info
 
-  # (optional) Encrypt partitions
+  # (Optional) Encrypt the root partition
   if [ "$encrypt" = "yes" ]; then
-    sgdisk -t 2:8309 $target &> /dev/null  # Change partition 2 type to LUKS (for encryption)
-    partprobe "$target" &> /dev/null       # Update target disk info(s) and inform system
+    sgdisk -t 2:8309 $target &> /dev/null  # Set partition 2 type to LUKS
+    partprobe "$target" &> /dev/null       # Update partition info
 
-    # Encrypt partition 2 using the provided key
+    # Encrypt root partition
     echo -n "$encrypt_key" | cryptsetup --type $encrypt_type -v -y luksFormat ${target_part}2 --key-file=- &> /dev/null
-    # Open the encrypted partition
     echo -n "$encrypt_key" | cryptsetup open --perf-no_read_workqueue --perf-no_write_workqueue --persistent ${target_part}2 $encrypt_label --key-file=- &> /dev/null
-    root_device="/dev/mapper/${encrypt_label}"  # Set the root device to the encrypted partition
+    root_device="/dev/mapper/${encrypt_label}"  # Set root to encrypted partition
   else
-    root_device=${target_part}2         # Set the root device to the non-encrypted partition
+    root_device=${target_part}2  # Set root to non-encrypted partition
   fi
 
-  # Format paritions
-  mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null # EFI System Partition (ESP) as FAT32
+  # Format the EFI partition
+  mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null
 
-  # Check if target filesystem is 'btrfs'
+  # Format and mount the root partition
   if [ "$part2_fs" = "btrfs" ]; then
-    mkfs.btrfs -L $part2_label $root_device &> /dev/null  # Root Partition as BTRFS
+    mkfs.btrfs -L $part2_label $root_device &> /dev/null  # Format as Btrfs
+    mount $root_device /mnt                               # Mount root
 
-    # Mount Root partition
-    mount $root_device /mnt  # Mount root partition
-
-    # Create Btrfs subvolumes for system and data segregation
-    btrfs subvolume create /mnt/@ &> /dev/null           # Main system subvolume
-    btrfs subvolume create /mnt/@home &> /dev/null       # Home directory subvolume
+    # Create Btrfs subvolumes
+    btrfs subvolume create /mnt/@ &> /dev/null           # System subvolume
+    btrfs subvolume create /mnt/@home &> /dev/null       # Home subvolume
     btrfs subvolume create /mnt/@snapshots &> /dev/null  # Snapshots subvolume
     btrfs subvolume create /mnt/@cache &> /dev/null      # Cache subvolume
-    btrfs subvolume create /mnt/@log &> /dev/null        # Log files subvolume
-    btrfs subvolume create /mnt/@tmp &> /dev/null        # Temporary files subvolume
+    btrfs subvolume create /mnt/@log &> /dev/null        # Log subvolume
+    btrfs subvolume create /mnt/@tmp &> /dev/null        # Temp subvolume
 
-    # Create additional Btrfs subvolumes
+    # Create additional subvolumes
     for subvol in "${btrfs_subvols[@]}"; do
       btrfs subvolume create /mnt/@$subvol &> /dev/null
     done
 
-    umount /mnt  # Unmount the root device to remount with options
+    umount /mnt  # Unmount to remount with subvolume options
 
-    # Remount the main system subvolume
+    # Remount with Btrfs subvolumes
     mount -o ${BTRFS_SV_OPTS},subvol=@ $root_device /mnt &> /dev/null
-
-    # Create mount points for additional subvolumes
     mkdir -p /mnt/{home,.snapshots,var/cache,var/log,var/tmp} &> /dev/null
-
-    # Mount subvolumes
     mount -o ${BTRFS_SV_OPTS},subvol=@home $root_device /mnt/home
     mount -o ${BTRFS_SV_OPTS},subvol=@snapshots $root_device /mnt/.snapshots
-    mount -o ${BTRFS_SV_OPTS},subvol=@cache $root_device /mnt/var/cach
+    mount -o ${BTRFS_SV_OPTS},subvol=@cache $root_device /mnt/var/cache
     mount -o ${BTRFS_SV_OPTS},subvol=@log $root_device /mnt/var/log
     mount -o ${BTRFS_SV_OPTS},subvol=@tmp $root_device /mnt/var/tmp
 
@@ -314,16 +287,15 @@ disk_formatting() {
       mount -o ${BTRFS_SV_OPTS},subvol=@${btrfs_subvols[$i]} $root_device /mnt${btrfs_subvols_mount[$i]}
     done
   else
-    mkfs.ext4 -L $part2_label $root_device &> /dev/null  # Root Partition as EXT4
-
-    # Mount Root partition
-    mount $root_device /mnt  # Mount root partition
+    mkfs.ext4 -L $part2_label $root_device &> /dev/null  # Format as EXT4
+    mount $root_device /mnt                              # Mount root
   fi
 
   # Mount EFI partition
-  mkdir -p /mnt/$part1_mount               # Create mount point for EFI partition
-  mount ${target_part}1 /mnt/$part1_mount  # Mount EFI partition
+  mkdir -p /mnt/$part1_mount
+  mount ${target_part}1 /mnt/$part1_mount
 }
+
 
 gnome() {}
 
@@ -501,15 +473,15 @@ EOF
 
 # System Installation
 #
-# This function installs the base system packages and generates the fstab file.
-#
-# For more information on the packages and options passed to pacstrap, refer 
-# to the 'Constants' section in the Script Core.
+# Installs the base system packages and generates the fstab file.
 sys_installation() {
-  # Install base system pkg(s)
-  pacstrap /mnt $LNX $BASE $BOOTLOADER $NETWORK $CRYPT $EXTRA
-  genfstab -U -p /mnt >> /mnt/etc/fstab &> /dev/null  # Generate fstab
+  # Install base system packages
+  pacstrap /mnt $LNX $BASE $CPU $BOOTLOADER $NETWORK $CRYPT $EXTRA
+
+  # Generate fstab file
+  genfstab -U -p /mnt >> /mnt/etc/fstab &> /dev/null
 }
+
 
 # User Configuration
 #
@@ -529,6 +501,31 @@ user_conf() {
   echo "$username:$password" | chpasswd &> /dev/null                                         # Set password for the new user
   sed -i "s/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers &> /dev/null  # Enable 'wheel' group users to use sudo
 }
+
+
+# Script main
+# ==============================================================================
+checker
+
+print_info "[*] Preparing the machine for the installation ..."
+preparation
+print_success "[+] The machine is ready for the installation!"
+
+print_info "[*] Formatting the disk ..."
+disk_formatting
+print_success "[+] The disk has been formatted!"
+
+print_info "[*] Installing the base system ..."
+sys_installation
+print_success "[+] The base system has been installed!"
+
+print_info "[*] CHRooting into the new system ..."
+arch-chroot /mnt /bin/bash
+print_success "[+] CHRooted into the new system!"
+
+
+
+# ^-^-^-^-^-^-^-^-^-^        End of Script Core          ^-^-^-^-^-^-^-^-^-^-^-^
 
 
 
