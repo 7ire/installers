@@ -3,7 +3,7 @@
 ## Asus B650E-F
 
 > [!NOTE]
-> TL;DR**: Resources used to create this guide:
+> TL;DR: Resources used to create this guide:
 
 **BIOS Tweak Resources**:
 

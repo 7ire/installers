@@ -1,6 +1,7 @@
 # Windows 11
 
-**TL;DR**: Resources used to create this guide:
+> [!NOTE]
+> TL;DR: Resources used to create this guide:
 
 **Base Optimization Resources**:
 
