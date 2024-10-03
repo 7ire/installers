@@ -357,6 +357,27 @@ print_success "[+] Bootloader configuration completed!"
 
 
 
+# ------------------------------------------------------------------------------
+#                                Graphics Driver
+# ------------------------------------------------------------------------------
+
+if [ "gpu" = "nvidia" ]; then
+    pacman -S --noconfirm nvidia-open nvidia-open-dkms \
+                    nvidia-utils opencl-nvidia \
+                    lib32-nvidia-utils lib32-opencl-nvidia \
+                    nvidia-settings &> /dev/null
+    # Add necessary kernel modules and udev rules
+    sed -i '/^MODULES=/ s/(\(.*\))/(\1 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
+    sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia_drm.modeset=1"/' /etc/default/grub
+    bash -c 'echo "ACTION==\"add\", DEVPATH==\"/bus/pci/drivers/nvidia\", RUN+=\"/usr/bin/nvidia-modprobe -c 0 -u\"" > /etc/udev/rules.d/70-nvidia.rules'
+    bash -c 'echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" > /etc/modprobe.d/nvidia-power-mgmt.conf'
+    mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
+    grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
+else
+fi
+
+
+
 su $username
 # ------------------------------------------------------------------------------
 #                           (User) Extra Configuration
