@@ -358,7 +358,25 @@ print_success "[+] Bootloader configuration completed!"
 
 
 # ------------------------------------------------------------------------------
-#                                Graphics Driver
+#                                Audio Driver(s)
+# ------------------------------------------------------------------------------
+print_info "[*] Installing audio driver ..."
+
+pacman -S --noconfirm pipewire lib32-pipewire \
+                pipewire-jack lib32-pipewire-jack \
+                wireplumber \
+                pipewire-alsa \
+                pipewire-audio \
+                pipewire-ffado \
+                pipewire-pulse \
+                pipewire-docs &> /dev/null
+
+print_success "[+] Audio driver installation completed!"
+
+
+
+# ------------------------------------------------------------------------------
+#                               Graphics Driver(s)
 # ------------------------------------------------------------------------------
 print_info "[*] Installing graphics driver ..."
 
@@ -374,7 +392,7 @@ if [ "gpu" = "nvidia" ]; then
     bash -c 'echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" > /etc/modprobe.d/nvidia-power-mgmt.conf'
     mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
-else
+elif [ "gpu" = "intel" ]; then
     pacman -S --noconfirm mesa lib32-mesa \
                     intel-media-driver libva-intel-driver \
                     vulkan-intel lib32-vulkan-intel &> /dev/null
@@ -448,6 +466,122 @@ if [ "$printer" = "yes" ]; then
 fi
 
 print_success "[+] User extra configuration completed!"
+
+
+
+# ------------------------------------------------------------------------------
+#                              Desktop Environment
+# ------------------------------------------------------------------------------
+print_info "[*] Configuring desktop environment ..."
+
+if [ "$de" = "gnome" ]; then
+    # Install GNOME
+    sudo pacman -S --noconfirm gdm gnome-shell gnome-keybindings power-profiles-daemon &> /dev/null
+    # Install XDG packages
+    sudo pacman -S --noconfirm xdg-user-dirs xdg-desktop-portal xdg-user-dirs-gtk xdg-desktop-portal-gnome &> /dev/null
+    # Install authentications packages
+    sudo pacman -S --noconfirm polkit polkit-gnome gnome-keyring &> /dev/null
+    if [ "$bluetooth" = "yes" ]; then
+        sudo pacman -S --noconfirm gnome-bluetooth-3.0 &> /dev/null  # Install bluetooth pkgs if enabled
+    fi
+    sudo ln -sf /dev/null /etc/udev/rules.d/61-gdm.rules                            # Disable GDM rule
+    sudo sed -i 's/^#WaylandEnable=false/WaylandEnable=true/' /etc/gdm/custom.conf  # Enable Wayland in GDM
+    # GNOME Keybinds - support vars
+    KEYS_GNOME_WM=/org/gnome/desktop/wm/keybindings
+    KEYS_GNOME_SHELL=/org/gnome/shell/keybindings
+    KEYS_MUTTER=/org/gnome/mutter/keybindings
+    KEYS_MEDIA=/org/gnome/settings-daemon/plugins/media-keys
+    KEYS_MUTTER_WAYLAND_RESTORE=/org/gnome/mutter/wayland/keybindings/restore-shortcuts
+    # Reset conflict shortcut
+    for i in {1..9}; do
+        dconf write "${KEYS_GNOME_SHELL}/switch-to-application-${i}" "@as []" &> /dev/null
+    done
+    # Close Window
+    dconf write ${KEYS_GNOME_WM}/close "['<Super>q', '<Alt>F4']"
+    # Application
+    dconf write ${KEYS_MEDIA}/terminal "['<Super>t']"  # Launch terminal
+    dconf write ${KEYS_MEDIA}/www "['<Super>f']"       # Launch web browser
+    dconf write ${KEYS_MEDIA}/email "['<Super>m']"     # Launch email client
+    dconf write ${KEYS_MEDIA}/home "['<Super>e']"      # Home folder
+
+    dconf write ${KEYS_MEDIA}/screensaver "['<Super>Escape']"  # Lock screen
+    # Workspaces - move to N workspace
+    for i in {1..9}; do
+        dconf write "${KEYS_GNOME_WM}/switch-to-workspace-${i}" "['<Super>${i}']" &> /dev/null
+    done
+    # Workspaces - move current application to N workspace
+    for i in {1..9}; do
+        dconf write "${KEYS_GNOME_WM}/move-to-workspace-${i}" "['<Shift><Super>${i}']" &> /dev/null
+    done
+    # Workspace - motion
+    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-right "['<Alt><Super>Right']" &> /dev/null  # Move right
+    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-left "['<Alt><Super>Left']" &> /dev/null    # Move left
+    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-last "['<Super>0']" &> /dev/null            # Move last
+    # Application
+    BASE_PKG=(
+        gnome-control-center  # GNOME's main interface to configure various aspects of the desktop
+        gnome-tweaks          # Graphical interface for advanced GNOME 3 settings (Tweak Tool)
+        mission-center        # Monitor your CPU, Memory, Disk, Network and GPU usage
+        extension-manager     # A native tool for browsing, installing, and managing GNOME Shell Extensions
+        dconf-editor          # GSettings editor for GNOME
+    )
+    FILE_PKG=(
+        nautilus               # Default file manager for GNOME
+        sushi                  # A quick previewer for Nautilus
+        libnautilus-extension  # Extension interface for Nautilus
+    )
+    FILE_ADDON_PKG=(
+        nautilus-image-converter            # Nautilus extension to rotate/resize image files
+        nautilus-share                      # Nautilus extension to share folder using Samba
+        seahorse-nautilus                   # PGP encryption and signing for Nautilus
+        turtle                              # Manage your git repositories with easy-to-use dialogs in Nautilus
+        nautilus-open-any-terminal          # Context-menu entry for opening other terminal in nautilus
+        nautilus-open-in-code               # Open current directory in VSCode from Nautilus context menu
+        folder-color-nautilus               # Change your folder color in Nautilus
+        ffmpeg-audio-thumbnailer            # A minimal audio file thumbnailer for file managers, such as nautilus, dolphin, thunar, and nemo
+    )
+    APP_PKG=(
+        blackbox-terminal                   # Beautiful GTK 4 terminal
+        firefox                             # Fast, Private & Safe Web Browser
+        thunderbird                         # Standalone mail and news reader from mozilla.org
+        gnome-calculator                    # GNOME Scientific calculator
+        gnome-calendar                      # Simple and beautiful calendar application designed to perfectly fit the GNOME desktop
+        gnome-text-editor                   # A simple text editor for the GNOME desktop
+        gnome-disk-utility                  # Disk Management Utility for GNOME
+        papers                              # Document viewer (PDF, PostScript, XPS, djvu, tiff, cbr, cbz, cb7, cbt)
+        loupe                               # A simple image viewer for GNOME
+        clapper                             # Modern and user-friendly media player
+    )
+    OFFICE_PKG=(
+        libreoffice-fresh                   # LibreOffice branch which contains new features and program enhancements
+        libreoffice-extension-texmaths      # LaTeX equation editor for LibreOffice
+        libreoffice-extension-writer2latex  # LibreOffice extensions for converting to and working with LaTeX in LibreOffice
+    )
+    # Install packages
+    ${aur} -S --noconfirm "${BASE_PKG[@]}" &> /dev/null
+    ${aur} -S --noconfirm "${APP_PKG[@]}" &> /dev/null
+    ${aur} -S --noconfirm "${FILE_PKG[@]}" &> /dev/null
+    ${aur} -S --noconfirm "${FILE_ADDON_PKG[@]}" &> /dev/null
+    ${aur} -S --noconfirm "${OFFICE_PKG[@]}" &> /dev/null
+    # GNOME Extensions
+    EXT_PKG=(
+        gnome-shell-extension-blur-my-shell                  # Extension that adds a blur look to different parts of the GNOME Shell
+        gnome-shell-extension-dash-to-dock                   # Move the dash out of the overview transforming it in a dock
+        gnome-shell-extension-just-perfection-desktop        # Just Perfection GNOME Shell Desktop
+        gnome-shell-extension-unite                          # Unite makes GNOME Shell look like Ubuntu Unity Shell
+        gnome-shell-extension-rounded-window-corners-reborn  # A GNOME Shell extension that adds rounded corners for all windows
+        gnome-shell-extension-alphabetical-grid-extension    # Restore the alphabetical ordering of the app grid, removed in GNOME 3.38
+        gnome-shell-extensions                               # Extensions for GNOME shell, including classic mode
+        gnome-shell-extension-arc-menu                       # Application menu extension for GNOME Shell
+        gnome-shell-extension-arch-update                    # Convenient indicator for Arch Linux updates in GNOME Shell
+    )
+    ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
+    sudo systemctl enable gdm.service  # Enable GDM service
+elif [ "$de" = "kde" ]; then
+    # W.I.P.
+fi
+
+print_success "[+] Desktop environment configuration completed!"
 
 
 
