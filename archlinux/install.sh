@@ -360,6 +360,7 @@ print_success "[+] Bootloader configuration completed!"
 # ------------------------------------------------------------------------------
 #                                Graphics Driver
 # ------------------------------------------------------------------------------
+print_info "[*] Installing graphics driver ..."
 
 if [ "gpu" = "nvidia" ]; then
     pacman -S --noconfirm nvidia-open nvidia-open-dkms \
@@ -374,7 +375,15 @@ if [ "gpu" = "nvidia" ]; then
     mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
 else
+    pacman -S --noconfirm mesa lib32-mesa \
+                    intel-media-driver libva-intel-driver \
+                    vulkan-intel lib32-vulkan-intel &> /dev/null
+    sed -i '/^MODULES=/ s/(\(.*\))/(\1 i915)/' /etc/mkinitcpio.conf  # Add i915 to modules
+    mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
+    grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
 fi
+
+print_success "[+] Graphics driver installation completed!"
 
 
 
