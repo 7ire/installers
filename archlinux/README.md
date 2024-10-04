@@ -162,12 +162,6 @@ The script will take care of partitioning the disk, installing the base system, 
 
 ## Manual Overview
 
-Per rendere più distinti i titoli di livello 4 dai testi in grassetto, puoi aggiungere maggiore enfasi visiva, ad esempio con l'uso di sottolineature o introducendo stili per separare i titoli dal testo normale. Ecco una versione migliorata con titoli di livello 4 più distinti:
-
----
-
-## Manual Overview
-
 ### 1. Machine Preparation
 
 This section guides you through the basic preparation of an Arch Linux machine for manual installation. It includes configuring the keyboard, enabling time synchronization, refreshing package databases, updating mirrorlists, and setting up the package manager `pacman`.
