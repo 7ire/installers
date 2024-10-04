@@ -179,9 +179,13 @@ cat > /etc/hosts << EOF           # Configure /etc/hosts for local hostname reso
 ::1         localhost
 127.0.1.1   ${hostname}.localdomain ${hostname}
 EOF
-sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen  # Enable the desired locale in /etc/locale.gen
-echo "LANG=${lang}" > /etc/locale.conf        # Set system language/locale
-locale-gen &> /dev/null                       # Generate locale
+sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen  # Enable the desired primary locale in /etc/locale.gen
+for locale in "${extra_lang[@]}"; do          # Enable additional locales, if any
+  sed -i "s/^#\(${locale}\)/\1/" /etc/locale.gen
+done
+echo "LANG=${lang}" > /etc/locale.conf         # Set system language/locale
+echo "LC_TIME=${lc_time}" >> /etc/locale.conf  # Set locale for time display
+locale-gen &> /dev/null                        # Generate locale
 # Set system timezone and sync hardware clock
 ln -sf /usr/share/zoneinfo/"$timezone" /etc/localtime &> /dev/null
 hwclock --systohc &> /dev/null
@@ -621,6 +625,9 @@ if [ "$de" = "gnome" ]; then
         gnome-shell-extensions                               # Extensions for GNOME shell, including classic mode
         gnome-shell-extension-arc-menu                       # Application menu extension for GNOME Shell
         gnome-shell-extension-arch-update                    # Convenient indicator for Arch Linux updates in GNOME Shell
+        gnome-shell-extension-runcat                         # Cat tells you the CPU usage by running speed
+        gnome-shell-extension-openweatherrefined             # Display weather for the current or a specified location in the GNOME shell
+        gnome-shell-extension-weather-oclock                 # Displays the current weather inside the pill next to the clock
     )
     ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
     sudo systemctl enable gdm.service  # Enable GDM service
