@@ -7,8 +7,10 @@
 #     /      \     | Description | Arch Linux system installation              |
 #    /   ,,   \    |    Owner    | Tir3                                        |
 #   /   |  |  -\   |   GitHub    | https://github.com/atirelli3                |
-#  /_-''    ''-_\  |   Version   | 0.1.0                                       |
+#  /_-''    ''-_\  |   Version   | 1.0.0                                       |
 # ------------------------------------------------------------------------------
+
+source "$1"  # Load configuration file
 
 # Constants
 [[ $target =~ ^/dev/nvme[0-9]+n[0-9]+$ ]] && target_part="${target}p" || target_part="$target"
@@ -16,15 +18,29 @@ BTRFS_SV_OPTS=$(IFS=,; echo "${btrfs_opts[*]}")   ## Btrfs mount options
 LNX="linux-zen linux-zen-headers linux-firmware"  ## Base Linux packages
 BASE="base base-devel git"                        ## Base system packages
 CPU="${cpu}-ucode"                                ## CPU driver
-BOOTLOADER="grub efibootmgr os-prober"            ## Bootloader
+BOOTLOADER="efibootmgr os-prober"                 ## Bootloader
 NETWORK="networkmanager"                          ## Network manager
 CRYPT="cryptsetup"                                ## Encryption
 EXTRA="sudo"                                      ## Extra packages
+DE=""                                             ## Desktop environment
 
 # Conditional package addition
 [ "$encrypt" = "yes" ] && [ "$part2_fs" != "btrfs" ] && CRYPT+=" lvm2"
 [ "$part2_fs" = "btrfs" ] && EXTRA+=" btrfs-progs"
+[ "$bootldr" = "grub" ] && BOOTLOADER+=" grub"
+[ "$bootldr" = "systemd-boot" ] && BOOTLOADER+=" systemd-boot"
 USR_EXT_PKGS=$(IFS=" "; echo "${pkgs[*]}")         ## User extra packages
+if [ "$de" = "gnome" ]; then
+    ## GNOME packages
+    DE="gdm gnome-shell gnome-keybindings power-profiles-daemon"
+    ## XDG packages
+    DE+=" xdg-user-dirs xdg-desktop-portal xdg-user-dirs-gtk xdg-desktop-portal-gnome"
+    ## Authentication packages
+    DE+=" polkit polkit-gnome gnome-keyring"
+    [ "$bluetooth" = "yes" ] && DE+=" gnome-bluetooth-3.0"  # Bluetooth package
+elif [ "$de" = "kde" ]; then
+    # W.I.P.
+fi
 
 # Utility functions
 print_debug() { echo -e "\e[${1}m${2}\e[0m"; }
@@ -51,7 +67,11 @@ reflector --country "${reflector_countries}" \               # Search for better
             --age 6 \
             --sort rate \
             --save /etc/pacman.d/mirrorlist &> /dev/null
-sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf  # Enable 'ParalleDownloads' 4pacman
+# Enable colored output, fancy progress bar, verbose package lists, and parallel downloads (20)
+sed -i "/etc/pacman.conf" \
+    -e "s|^#Color|&\nColor\nILoveCandy|" \
+    -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
+    -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
 pacman -S --noconfirm archlinux-keyring &> /dev/null                # Download updated keyrings
 pacman-key --init &> /dev/null                                      # Initialize newer keyrings
 pacman -Syy &> /dev/null                                            # Refresh package manager database(s)
@@ -192,9 +212,19 @@ print_success "[+] User(s) configuration completed!"
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring pacman..."
 
-sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf  # Enable 'ParalleDownloads' 4pacman
-sed -i 's/^#Color/Color/' /etc/pacman.conf                          # Make output colored
-sed -i '/^Color/a ILoveCandy' /etc/pacman.conf                      # Fancy progress bar (pacman)
+# Enable colored output, fancy progress bar, verbose package lists, and parallel downloads (20)
+sed -i "/etc/pacman.conf" \
+    -e "s|^#Color|&\nColor\nILoveCandy|" \
+    -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
+    -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+# Improve 'Makepkg' QoL
+sed -i "/etc/makepkg.conf" \
+    -e "s|^#BUILDDIR=.*|&\nBUILDDIR=/var/tmp/makepkg|" \
+    -e "s|^PKGEXT.*|PKGEXT='.pkg.tar'|" \
+    -e "s|^OPTIONS=.*|#&\nOPTIONS=(docs \!strip \!libtool \!staticlibs emptydirs zipman purge \!debug lto)|" \
+    -e "s|-march=.* -mtune=generic|-march=native|" \
+    -e "s|^#RUSTFLAGS=.*|&\nRUSTFLAGS=\"-C opt-level=2 -C target-cpu=native\"|" \
+    -e "s|^#MAKEFLAGS=.*|&\nMAKEFLAGS=\"-j$(($(nproc --all)-1))\"|"
 pacman -S --noconfirm pacman-contrib &> /dev/null  # pacman utils & scripts
 systemctl enable paccache.timer &> /dev/null       # Enable automatic cache cleaning (every week)
 sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf  # Enable multilib repository
@@ -326,32 +356,38 @@ print_success "[+] Initial ramdisk configuration completed!"
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring the bootloader ..."
 
-cp /etc/default/grub /etc/default/grub.backup  # Backup current GRUB configuration
-# Update GRUB settings
-sed -i "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=30/" /etc/default/grub                          # Timeout = 30s
-sed -i "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/" /etc/default/grub                       # Use last selection
-sed -i "s/^#GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=y/" /etc/default/grub                  # Save last selection
-sed -i "s/^#GRUB_DISABLE_SUBMENU=.*/GRUB_DISABLE_SUBMENU=y/" /etc/default/grub          # Sub-menus
-sed -i "s/^#GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/" /etc/default/grub  # Os-prober
-# UUID 4 encrypt disk
-if [ "$encrypt" = "yes" ]; then
-    uuid=$(blkid -s UUID -o value ${target_part}2)  # Get UUID of the encrypted partition
-    # Update GRUB for encrypted disk
-    sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 cryptdevice=UUID=$uuid:cryptdev\"/" /etc/default/grub
-    sed -i "s/^GRUB_PRELOAD_MODULES=.*/GRUB_PRELOAD_MODULES=\"part_gpt part_msdos luks\"/" /etc/default/grub
-    sed -i "s/^#GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub
+if [ "$bootldr" = "grub" ]; then
+    cp /etc/default/grub /etc/default/grub.backup  # Backup current GRUB configuration
+    # Update GRUB settings
+    sed -i "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=30/" /etc/default/grub                          # Timeout = 30s
+    sed -i "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/" /etc/default/grub                       # Use last selection
+    sed -i "s/^#GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=y/" /etc/default/grub                  # Save last selection
+    sed -i "s/^#GRUB_DISABLE_SUBMENU=.*/GRUB_DISABLE_SUBMENU=y/" /etc/default/grub          # Sub-menus
+    sed -i "s/^#GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/" /etc/default/grub  # Os-prober
+    # UUID 4 encrypt disk
+    if [ "$encrypt" = "yes" ]; then
+        uuid=$(blkid -s UUID -o value ${target_part}2)  # Get UUID of the encrypted partition
+        # Update GRUB for encrypted disk
+        sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 cryptdevice=UUID=$uuid:cryptdev\"/" /etc/default/grub
+        sed -i "s/^GRUB_PRELOAD_MODULES=.*/GRUB_PRELOAD_MODULES=\"part_gpt part_msdos luks\"/" /etc/default/grub
+        sed -i "s/^#GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub
+    fi
+    # Install GRUB to EFI partition
+    grub-install --target=x86_64-efi --efi-directory=/${part1_mount} --bootloader-id=GRUB --modules="tpm" --disable-shim-lock
+    grub-mkconfig -o /boot/grub/grub.cfg       # Generate GRUB configuration
+    if [ "$secure_boot" = "yes" ]; then
+        # Secure boot (make sure system secure boot is in 'Setup mode')
+        pacman -S --noconfirm sbctl &> /dev/null   # Install 'sbctl'
+        sbctl create-keys && sbctl enroll-keys -m  # Create and enroll secure boot keys
+        # Sign the necessary files
+        sbctl sign -s /${part1_mount}/EFI/GRUB/grubx64.efi \
+                -s /${part1_mount}/grub/x86_64-efi/core.efi \
+                -s /${part1_mount}/grub/x86_64-efi/grub.efi \
+                -s /${part1_mount}/vmlinuz-linux-zen &> /dev/null
+    fi
+elif [ "$bootldr" = "systemd-boot" ]; then
+    # W.I.P.
 fi
-# Install GRUB to EFI partition
-grub-install --target=x86_64-efi --efi-directory=/${part1_mount} --bootloader-id=GRUB --modules="tpm" --disable-shim-lock
-grub-mkconfig -o /boot/grub/grub.cfg       # Generate GRUB configuration
-# Secure boot (make sure system secure boot is in 'Setup mode')
-pacman -S --noconfirm sbctl &> /dev/null   # Install 'sbctl'
-sbctl create-keys && sbctl enroll-keys -m  # Create and enroll secure boot keys
-# Sign the necessary files
-sbctl sign -s /${part1_mount}/EFI/GRUB/grubx64.efi \
-           -s /${part1_mount}/grub/x86_64-efi/core.efi \
-           -s /${part1_mount}/grub/x86_64-efi/grub.efi \
-           -s /${part1_mount}/vmlinuz-linux-zen
 
 print_success "[+] Bootloader configuration completed!"
 
@@ -412,8 +448,8 @@ su $username
 print_info "[*] User extra configuration ..."
 
 sudo pacman -S --noconfirm $editor &> /dev/null  # Install default editor
-sudo echo "EDITOR=${editor}" > /etc/environment  # Set the default editor
-sudo echo "VISUAL=${editor}" >> /etc/environment
+echo "EDITOR=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default editor
+echo "VISUAL=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default visual editor
 sudo pacman -S --noconfirm $USR_EXT_PKGS &> /dev/null  # Install additional packages
 # Install AUR helper (paru or yay)
 if [ "$aur" = "paru" ]; then
@@ -430,6 +466,24 @@ elif [ "$aur" = "yay" ]; then
     cd - && rm -rf /tmp/yay
     sudo pacman -Syyu --noconfirm &> /dev/null
     yay -Syyu --noconfirm &> /dev/null
+fi
+# QoL
+${aur} -S --noconfirm pkgfile &> /dev/null       # Install 'pkgfile'
+sudo pkgfile --update &> /dev/null               # Update 'pkgfile' database(s)
+${aur} -S --noconfirm tealdeer &> /dev/null      # Install 'tealdeer'
+tldr --update &> /dev/null                       # Update tldr pages
+sudo pacman -S --noconfirm mlocate &> /dev/null  # Install 'mlocate'
+sudo updatedb &> /dev/null                       # Update 'mlocate' database(s)
+# Add command-not-found support to ~/.bashrc if not present
+BASHRC="$HOME/.bashrc"
+CONTENT='
+# Command-not-found support for pkgfile
+if [[ -f /usr/share/doc/pkgfile/command-not-found.bash ]]; then
+    . /usr/share/doc/pkgfile/command-not-found.bash
+fi
+'
+if ! grep -q "/usr/share/doc/pkgfile/command-not-found.bash" "$BASHRC"; then
+    echo "$CONTENT" >> "$BASHRC"
 fi
 # Install and enable optional services
 # SSH
@@ -475,15 +529,7 @@ print_success "[+] User extra configuration completed!"
 print_info "[*] Configuring desktop environment ..."
 
 if [ "$de" = "gnome" ]; then
-    # Install GNOME
-    sudo pacman -S --noconfirm gdm gnome-shell gnome-keybindings power-profiles-daemon &> /dev/null
-    # Install XDG packages
-    sudo pacman -S --noconfirm xdg-user-dirs xdg-desktop-portal xdg-user-dirs-gtk xdg-desktop-portal-gnome &> /dev/null
-    # Install authentications packages
-    sudo pacman -S --noconfirm polkit polkit-gnome gnome-keyring &> /dev/null
-    if [ "$bluetooth" = "yes" ]; then
-        sudo pacman -S --noconfirm gnome-bluetooth-3.0 &> /dev/null  # Install bluetooth pkgs if enabled
-    fi
+    sudo pacman -S --noconfirm $DE &> /dev/null                                     # Install GNOME packages
     sudo ln -sf /dev/null /etc/udev/rules.d/61-gdm.rules                            # Disable GDM rule
     sudo sed -i 's/^#WaylandEnable=false/WaylandEnable=true/' /etc/gdm/custom.conf  # Enable Wayland in GDM
     # GNOME Keybinds - support vars
@@ -557,6 +603,7 @@ if [ "$de" = "gnome" ]; then
         libreoffice-extension-texmaths      # LaTeX equation editor for LibreOffice
         libreoffice-extension-writer2latex  # LibreOffice extensions for converting to and working with LaTeX in LibreOffice
     )
+    ${aur} -Syy &> /dev/null  # Refresh package manager database(s)
     # Install packages
     ${aur} -S --noconfirm "${BASE_PKG[@]}" &> /dev/null
     ${aur} -S --noconfirm "${APP_PKG[@]}" &> /dev/null
