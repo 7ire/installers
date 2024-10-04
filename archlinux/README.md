@@ -238,6 +238,8 @@ This section guides you through the basic preparation of an Arch Linux machine f
 > [!CAUTION]
 > Ensure that you refresh the package databases after updating the keyring to avoid package mismatch issues.
 
+---
+
 ### 2. Disk Partitioning and Formatting
 
 This section walks you through preparing the target disk, setting up partitions, and optionally encrypting the root partition. We will also format the partitions as either Btrfs or EXT4, depending on your setup.
@@ -346,3 +348,48 @@ This section walks you through preparing the target disk, setting up partitions,
 - **Mount the EFI partition**: Finally, mount the EFI partition.
   - Command: `mkdir -p /mnt/esp && mount /dev/sda1 /mnt/esp`
 
+### 3. Base System Installation
+
+In this section, we will install the base system packages, generate the `fstab` file, and change root to the new system for further configuration.
+
+#### Install Base System Packages
+
+- **Install essential packages**: Use `pacstrap` to install the base Linux system, including the kernel, bootloader, and additional utilities.
+  - Command:
+    ```bash
+    pacstrap /mnt base linux linux-firmware intel-ucode grub networkmanager
+    ```
+
+> [!IMPORTANT]
+> The `pacstrap` command installs the basic system components, including:
+> - `base`: Core system packages.
+> - `linux`: The Linux kernel.
+> - `linux-firmware`: Firmware for various hardware.
+> - `intel-ucode`: Microcode updates for Intel CPUs (replace with `amd-ucode` for AMD CPUs).
+> - `grub`: The GRUB bootloader (you can replace this with another bootloader if needed).
+> - `networkmanager`: Networking service for managing connections.
+  
+> [!NOTE]
+> You can adjust the list of packages based on your hardware or system preferences. For example, use `amd-ucode` if you're using an AMD processor, and ensure that your desired bootloader is installed.
+
+#### Generate `fstab`
+
+- **Generate the fstab file**: This file maps the partitions to their respective mount points.
+  - Command: 
+    ```bash
+    genfstab -U -p /mnt >> /mnt/etc/fstab
+    ```
+
+> [!TIP]
+> The `genfstab` command automatically detects the mounted partitions and generates a proper file system table (`fstab`). Always review the `fstab` to ensure all partitions are correctly listed and have the appropriate mount options.
+
+#### Change Root into the New System
+
+- **Change root to the new system**: After installing the base system, use `arch-chroot` to switch into the new system for further configuration.
+  - Command:
+    ```bash
+    arch-chroot /mnt /bin/bash
+    ```
+
+> [!NOTE]
+> You are now working inside your new system. Further configuration, such as setting the timezone, creating users, and installing additional packages, will be done from this environment.
