@@ -162,8 +162,13 @@ The script will take care of partitioning the disk, installing the base system, 
 
 ## Manual Overview
 
+Per rendere più distinti i titoli di livello 4 dai testi in grassetto, puoi aggiungere maggiore enfasi visiva, ad esempio con l'uso di sottolineature o introducendo stili per separare i titoli dal testo normale. Ecco una versione migliorata con titoli di livello 4 più distinti:
 
-### 1. System Preparation for Arch Linux Installation**
+---
+
+## Manual Overview
+
+### 1. System Preparation for Arch Linux Installation
 
 Follow these steps to prepare your system for the Arch Linux installation. This section will guide you through configuring the keyboard layout, syncing time, optimizing mirrors, enabling `pacman` enhancements, and initializing keyrings.
 
@@ -196,6 +201,8 @@ Follow these steps to prepare your system for the Arch Linux installation. This 
    pacman -Syy
    ```
 
+---
+
 #### 1.2 Backup and Optimize Mirrorlist
 
 - **Backup Current Mirrorlist**  
@@ -218,21 +225,26 @@ Follow these steps to prepare your system for the Arch Linux installation. This 
    > [!TIP]  
    > Adjust the `--country` flag to your preferred region for optimal download speeds.
 
-#### 1.3. Enhance `pacman` Configuration
+---
 
-**Enable `pacman` Features** , enable colored output, fancy progress bars, and parallel downloads (up to 20):
+#### 1.3 Enhance `pacman` Configuration
 
-   ```bash
-   sed -i "/etc/pacman.conf" \
-      -e "s|^#Color|&\nColor\nILoveCandy|" \
-      -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
-      -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
-   ```
+**Enable `pacman` Features**  
+Enable colored output, fancy progress bars, and parallel downloads (up to 20):
 
-   > [!IMPORTANT]  
-   > Enabling parallel downloads improves the installation speed, especially on fast connections.
+```bash
+sed -i "/etc/pacman.conf" \
+    -e "s|^#Color|&\nColor\nILoveCandy|" \
+    -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
+    -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+```
 
-#### 1.4. Initialize Keyrings
+> [!IMPORTANT]  
+> Enabling parallel downloads improves the installation speed, especially on fast connections.
+
+---
+
+#### 1.4 Initialize Keyrings
 
 1. **Install and Update Keyrings**  
    Ensure your system has the latest keyrings for signed package installations:
@@ -255,5 +267,4 @@ Follow these steps to prepare your system for the Arch Linux installation. This 
    pacman -Syy
    ```
 
-> [!SUCCESS]  
-> Your system is now fully prepared for the Arch Linux installation.
+---
