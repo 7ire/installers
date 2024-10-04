@@ -1,6 +1,6 @@
 # Arch Linux Installer Guide
 
-## Overview
+## Installer Overview
 
 This guide will help you use the **Arch Linux Installer** to set up an Arch Linux system. The installer simplifies the installation process by allowing you to define your preferences in a configuration file.
 
@@ -21,13 +21,13 @@ Where `arch.conf` is your custom configuration file containing all the settings 
 > chmod +x install.sh
 > ```
 
-## Configuration File Parameters
+### Configuration File Parameters
 
 Below is a breakdown of the key sections of the configuration file, with each section's parameters and their supported values.
 
 ---
 
-### 1. Preparation Settings
+#### 1. Preparation Settings
 
 This section allows you to optimize the package downloads by selecting the fastest mirrors based on your location.
 
@@ -40,7 +40,7 @@ This section allows you to optimize the package downloads by selecting the faste
 
 ---
 
-### 2. System Settings
+#### 2. System Settings
 
 Define essential system configurations such as hostname, language, timezone, and keyboard layout.
 
@@ -58,7 +58,7 @@ Define essential system configurations such as hostname, language, timezone, and
 
 ---
 
-### 3. Disk Settings
+#### 3. Disk Settings
 
 Configure disk partitioning, encryption, and the filesystem setup.
 
@@ -83,7 +83,7 @@ Configure disk partitioning, encryption, and the filesystem setup.
 
 ---
 
-### 4. Bootloader Settings
+#### 4. Bootloader Settings
 
 Choose the bootloader to install and whether to enable Secure Boot.
 
@@ -94,7 +94,7 @@ Choose the bootloader to install and whether to enable Secure Boot.
 
 ---
 
-### 5. Driver Settings
+#### 5. Driver Settings
 
 Install the appropriate CPU and GPU drivers.
 
@@ -105,7 +105,7 @@ Install the appropriate CPU and GPU drivers.
 
 ---
 
-### 6. User Settings
+#### 6. User Settings
 
 Set up the root and regular user credentials.
 
@@ -117,7 +117,7 @@ Set up the root and regular user credentials.
 
 ---
 
-### 7. User Extra Settings
+#### 7. User Extra Settings
 
 Configure additional preferences such as the default text editor, AUR helper, and optional services or extra packages.
 
@@ -135,7 +135,7 @@ Configure additional preferences such as the default text editor, AUR helper, an
 
 ---
 
-### 8. Desktop Environment Settings
+#### 8. Desktop Environment Settings
 
 Choose the desktop environment to install.
 
@@ -145,7 +145,7 @@ Choose the desktop environment to install.
 
 ---
 
-## Additional Information
+### Additional Information
 
 After completing the configuration file, you can begin the installation by running:
 
@@ -159,3 +159,101 @@ The script will take care of partitioning the disk, installing the base system, 
 > **Always back up important data** before running the script, as it will erase all data on the target disk.
 
 ---
+
+## Manual Overview
+
+
+### 1. System Preparation for Arch Linux Installation**
+
+Follow these steps to prepare your system for the Arch Linux installation. This section will guide you through configuring the keyboard layout, syncing time, optimizing mirrors, enabling `pacman` enhancements, and initializing keyrings.
+
+#### 1.1 Configure Keyboard Layout and Synchronize Time
+
+1. **Set the Keyboard Layout**  
+   Set your keyboard layout based on your language preference (e.g., `it` for Italian):
+
+   ```bash
+   loadkeys it
+   ```
+
+   > [!NOTE]  
+   > Replace `it` with your desired keyboard layout.
+
+2. **Enable NTP Time Synchronization**  
+   Activate the **NTP** (Network Time Protocol) to synchronize your system clock:
+
+   ```bash
+   timedatectl set-ntp true
+   ```
+
+   > [!TIP]  
+   > To verify the NTP status, use `timedatectl status`.
+
+3. **Refresh Package Database**  
+   Refresh the local package databases to ensure you're working with the latest versions:
+
+   ```bash
+   pacman -Syy
+   ```
+
+#### 1.2 Backup and Optimize Mirrorlist
+
+- **Backup Current Mirrorlist**  
+   Always back up your current `mirrorlist` before making any changes:
+
+   ```bash
+   cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+   ```
+
+   > [!CAUTION]  
+   > Backing up your mirrorlist allows you to restore the default configuration if needed.
+
+- **Optimize Mirrors for Speed**  
+   Use **reflector** to find the fastest mirrors in your region:
+
+   ```bash
+   reflector --country Italy,Germany --protocol https --age 6 --sort rate --save /etc/pacman.d/mirrorlist
+   ```
+
+   > [!TIP]  
+   > Adjust the `--country` flag to your preferred region for optimal download speeds.
+
+#### 1.3. Enhance `pacman` Configuration
+
+**Enable `pacman` Features** , enable colored output, fancy progress bars, and parallel downloads (up to 20):
+
+   ```bash
+   sed -i "/etc/pacman.conf" \
+      -e "s|^#Color|&\nColor\nILoveCandy|" \
+      -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
+      -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+   ```
+
+   > [!IMPORTANT]  
+   > Enabling parallel downloads improves the installation speed, especially on fast connections.
+
+#### 1.4. Initialize Keyrings
+
+1. **Install and Update Keyrings**  
+   Ensure your system has the latest keyrings for signed package installations:
+
+   ```bash
+   pacman -S --noconfirm archlinux-keyring
+   ```
+
+2. **Initialize Keyring**  
+   Initialize the keyring so that it can validate package signatures:
+
+   ```bash
+   pacman-key --init
+   ```
+
+3. **Final Package Database Refresh**  
+   Perform a final refresh of the package database after updating the keyrings:
+
+   ```bash
+   pacman -Syy
+   ```
+
+> [!SUCCESS]  
+> Your system is now fully prepared for the Arch Linux installation.
