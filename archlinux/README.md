@@ -177,14 +177,14 @@ This section guides you through the basic preparation of an Arch Linux machine f
 - **Keyboard layout configuration**: Sets the keyboard layout to `us` for the installation process.
   - Command: `loadkeys us`
   
-  > [!NOTE]
-  > You can change the keyboard layout later if needed using `localectl`.
+> [!NOTE]
+> You can change the keyboard layout later if needed using `localectl`.
 
 - **Enable NTP**: Activates automatic time synchronization to keep the system clock accurate.
   - Command: `timedatectl set-ntp true`
   
-  > [!TIP]
-  > You can verify that NTP is active with `timedatectl status`.
+> [!TIP]
+> You can verify that NTP is active with `timedatectl status`.
 
 - **Update package databases**: Refreshes the local package database to ensure the latest package information is available.
   - Command: `pacman -Syy`
@@ -194,8 +194,8 @@ This section guides you through the basic preparation of an Arch Linux machine f
 - **Backup current mirrorlist**: Creates a backup of the current mirrorlist to prevent data loss during updates.
   - Command: `cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup`
 
-  > [!IMPORTANT]
-  > It's always a good practice to create a backup before modifying important system files.
+> [!IMPORTANT]
+> It's always a good practice to create a backup before modifying important system files.
 
 - **Update mirrors using Reflector**: Updates the mirrorlist to use the fastest mirrors in Italy, Germany, and France.
   - Command:
@@ -207,8 +207,8 @@ This section guides you through the basic preparation of an Arch Linux machine f
               --save /etc/pacman.d/mirrorlist
     ```
 
-  > [!TIP]
-  > These countries are selected based on proximity to Europe, providing fast download speeds. Adjust them according to your location.
+> [!TIP]
+> These countries are selected based on proximity to Europe, providing fast download speeds. Adjust them according to your location.
 
 #### Configure pacman
 
@@ -221,8 +221,8 @@ This section guides you through the basic preparation of an Arch Linux machine f
       -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
     ```
 
-  > [!NOTE]
-  > `ILoveCandy` adds a fun graphical element to the progress bar but is optional.
+> [!NOTE]
+> `ILoveCandy` adds a fun graphical element to the progress bar but is optional.
 
 - **Update pacman keyring**: Installs and initializes the latest security keys for verifying package authenticity.
   - Commands:
@@ -235,7 +235,7 @@ This section guides you through the basic preparation of an Arch Linux machine f
 - **Refresh package databases**: Re-run the database refresh after keyring setup.
   - Command: `pacman -Syy`
 
-  > [!CAUTION]
-  > Ensure that you refresh the package databases after updating the keyring to avoid package mismatch issues.
+> [!CAUTION]
+> Ensure that you refresh the package databases after updating the keyring to avoid package mismatch issues.
 
 ### 2. Disk formatting
