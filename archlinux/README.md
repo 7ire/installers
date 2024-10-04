@@ -229,8 +229,8 @@ This section guides you through the basic preparation of an Arch Linux machine f
     - Install keyring: `pacman -S --noconfirm archlinux-keyring`
     - Initialize keys: `pacman-key --init`
 
-  > [!IMPORTANT]
-  > Keyring initialization is crucial to ensure package integrity and avoid verification errors.
+> [!IMPORTANT]
+> Keyring initialization is crucial to ensure package integrity and avoid verification errors.
 
 - **Refresh package databases**: Re-run the database refresh after keyring setup.
   - Command: `pacman -Syy`
@@ -238,4 +238,111 @@ This section guides you through the basic preparation of an Arch Linux machine f
 > [!CAUTION]
 > Ensure that you refresh the package databases after updating the keyring to avoid package mismatch issues.
 
-### 2. Disk formatting
+### 2. Disk Partitioning and Formatting
+
+This section walks you through preparing the target disk, setting up partitions, and optionally encrypting the root partition. We will also format the partitions as either Btrfs or EXT4, depending on your setup.
+
+#### Disk Preparation
+
+- **Unmount all mounted partitions**: Ensures that all mounted partitions are safely unmounted.
+  - Command: `umount -A --recursive /mnt`
+  
+> [!NOTE]
+> This step ensures that no partitions on `/mnt` are active during the process.
+
+- **Wipe all data**: Completely erases the target disk and clears the partition table.
+  - Command:
+    ```bash
+    wipefs -af /dev/sda
+    sgdisk --zap-all --clear /dev/sda
+    sgdisk -a 2048 -o /dev/sda
+    partprobe /dev/sda
+    ```
+
+> [!IMPORTANT]
+> This operation will **erase all data** on `/dev/sda`. Make sure you have selected the correct target disk before proceeding.
+
+- **Fill disk with random data (optional)**: This step improves security by filling the disk with random data before partitioning.
+  - Command:
+    ```bash
+    cryptsetup open --type plain -d /dev/urandom /dev/sda target
+    dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct
+    cryptsetup close target
+    ```
+
+> [!WARNING]
+> This step can take a long time depending on the disk size.
+
+#### Partitioning the Disk
+
+- **Create partitions**: We create an EFI partition for UEFI boot and a root partition for the main system.
+  - Command:
+    ```bash
+    sgdisk -n 0:0:+512MiB -t 0:ef00 -c 0:ESP /dev/sda  # EFI partition
+    sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs /dev/sda     # Root partition
+    partprobe /dev/sda
+    ```
+
+> [!TIP]
+> EFI partition is 512MiB, and the root partition occupies the rest of the disk.
+
+#### Encryption (Optional)
+
+- **Encrypt the root partition**: If encryption is enabled, encrypt the root partition using LUKS2.
+  - Command:
+    ```bash
+    sgdisk -t 2:8309 /dev/sda  # Set partition 2 type to LUKS
+    partprobe /dev/sda
+    echo -n "changeme" | cryptsetup --type luks2 -v -y luksFormat /dev/sda2 --key-file=-
+    echo -n "changeme" | cryptsetup open /dev/sda2 cryptdev --key-file=-
+    ```
+
+> [!IMPORTANT]
+> Replace it with a strong, secure password for production systems.
+
+#### Formatting and Mounting
+
+- **Format the EFI partition**: Format the EFI partition as FAT32.
+  - Command: `mkfs.vfat -F32 -n ESP /dev/sda1`
+
+- **Format the root partition**: Depending on your configuration, format the root partition as Btrfs or EXT4.
+
+  - **For Btrfs**:
+    - Command: `mkfs.btrfs -L archlinux /dev/mapper/cryptdev` (or `/dev/sda2` if not encrypted)
+    - Mount root: `mount /dev/mapper/cryptdev /mnt` (or `/dev/sda2`)
+
+    - **Create Btrfs subvolumes**:
+      ```bash
+      btrfs subvolume create /mnt/@
+      btrfs subvolume create /mnt/@home
+      btrfs subvolume create /mnt/@snapshots
+      btrfs subvolume create /mnt/@cache
+      btrfs subvolume create /mnt/@log
+      btrfs subvolume create /mnt/@tmp
+      ```
+
+    - **Mount subvolumes**:
+      ```bash
+      umount /mnt
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@ /dev/mapper/cryptdev /mnt
+      mkdir -p /mnt/{home,.snapshots,var/cache,var/log,var/tmp}
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@home /dev/mapper/cryptdev /mnt/home
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@snapshots /dev/mapper/cryptdev /mnt/.snapshots
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@cache /dev/mapper/cryptdev /mnt/var/cache
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@log /dev/mapper/cryptdev /mnt/var/log
+      mount -o rw,noatime,compress-force=zstd:1,space_cache=v2,subvol=@tmp /dev/mapper/cryptdev /mnt/var/tmp
+      ```
+
+> [!TIP]
+> Btrfs allows creating subvolumes to better organize and manage the filesystem.
+
+> [!NOTE]
+> Ensure you mount the Btrfs subvolumes in the correct directories.
+
+  - **For EXT4**:
+    - Command: `mkfs.ext4 -L archlinux /dev/mapper/cryptdev` (or `/dev/sda2` if not encrypted)
+    - Mount root: `mount /dev/mapper/cryptdev /mnt` (or `/dev/sda2`)
+
+- **Mount the EFI partition**: Finally, mount the EFI partition.
+  - Command: `mkdir -p /mnt/esp && mount /dev/sda1 /mnt/esp`
+
