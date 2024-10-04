@@ -411,6 +411,8 @@ pacman -S --noconfirm pipewire lib32-pipewire \
                 pipewire-pulse \
                 pipewire-docs &> /dev/null
 
+systemctl enable pipewire pipewire-pulse  # Enable services
+
 print_success "[+] Audio driver installation completed!"
 
 
