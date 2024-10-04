@@ -168,103 +168,74 @@ Per rendere più distinti i titoli di livello 4 dai testi in grassetto, puoi agg
 
 ## Manual Overview
 
-### 1. System Preparation for Arch Linux Installation
+### 1. Machine Preparation
 
-Follow these steps to prepare your system for the Arch Linux installation. This section will guide you through configuring the keyboard layout, syncing time, optimizing mirrors, enabling `pacman` enhancements, and initializing keyrings.
+This section guides you through the basic preparation of an Arch Linux machine for manual installation. It includes configuring the keyboard, enabling time synchronization, refreshing package databases, updating mirrorlists, and setting up the package manager `pacman`.
 
-#### 1.1 Configure Keyboard Layout and Synchronize Time
+#### Base Configuration
 
-1. **Set the Keyboard Layout**  
-   Set your keyboard layout based on your language preference (e.g., `it` for Italian):
+- **Keyboard layout configuration**: Sets the keyboard layout to `us` for the installation process.
+  - Command: `loadkeys us`
+  
+  > [!NOTE]
+  > You can change the keyboard layout later if needed using `localectl`.
 
-   ```bash
-   loadkeys it
-   ```
+- **Enable NTP**: Activates automatic time synchronization to keep the system clock accurate.
+  - Command: `timedatectl set-ntp true`
+  
+  > [!TIP]
+  > You can verify that NTP is active with `timedatectl status`.
 
-   > [!NOTE]  
-   > Replace `it` with your desired keyboard layout.
+- **Update package databases**: Refreshes the local package database to ensure the latest package information is available.
+  - Command: `pacman -Syy`
 
-2. **Enable NTP Time Synchronization**  
-   Activate the **NTP** (Network Time Protocol) to synchronize your system clock:
+#### Setup Mirrorlists
 
-   ```bash
-   timedatectl set-ntp true
-   ```
+- **Backup current mirrorlist**: Creates a backup of the current mirrorlist to prevent data loss during updates.
+  - Command: `cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup`
 
-   > [!TIP]  
-   > To verify the NTP status, use `timedatectl status`.
+  > [!IMPORTANT]
+  > It's always a good practice to create a backup before modifying important system files.
 
-3. **Refresh Package Database**  
-   Refresh the local package databases to ensure you're working with the latest versions:
+- **Update mirrors using Reflector**: Updates the mirrorlist to use the fastest mirrors in Italy, Germany, and France.
+  - Command:
+    ```bash
+    reflector --country "Italy,Germany,France" \
+              --protocol https \
+              --age 6 \
+              --sort rate \
+              --save /etc/pacman.d/mirrorlist
+    ```
 
-   ```bash
-   pacman -Syy
-   ```
+  > [!TIP]
+  > These countries are selected based on proximity to Europe, providing fast download speeds. Adjust them according to your location.
 
----
+#### Configure pacman
 
-#### 1.2 Backup and Optimize Mirrorlist
+- **Modify pacman configuration**: Enables colorized output, a custom progress bar, verbose package lists, and parallel downloads.
+  - Command:
+    ```bash
+    sed -i "/etc/pacman.conf" \
+      -e "s|^#Color|&\nColor\nILoveCandy|" \
+      -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
+      -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+    ```
 
-- **Backup Current Mirrorlist**  
-   Always back up your current `mirrorlist` before making any changes:
+  > [!NOTE]
+  > `ILoveCandy` adds a fun graphical element to the progress bar but is optional.
 
-   ```bash
-   cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-   ```
+- **Update pacman keyring**: Installs and initializes the latest security keys for verifying package authenticity.
+  - Commands:
+    - Install keyring: `pacman -S --noconfirm archlinux-keyring`
+    - Initialize keys: `pacman-key --init`
 
-   > [!CAUTION]  
-   > Backing up your mirrorlist allows you to restore the default configuration if needed.
+  > [!IMPORTANT]
+  > Keyring initialization is crucial to ensure package integrity and avoid verification errors.
 
-- **Optimize Mirrors for Speed**  
-   Use **reflector** to find the fastest mirrors in your region:
+- **Refresh package databases**: Re-run the database refresh after keyring setup.
+  - Command: `pacman -Syy`
 
-   ```bash
-   reflector --country Italy,Germany --protocol https --age 6 --sort rate --save /etc/pacman.d/mirrorlist
-   ```
+  > [!CAUTION]
+  > Ensure that you refresh the package databases after updating the keyring to avoid package mismatch issues.
 
-   > [!TIP]  
-   > Adjust the `--country` flag to your preferred region for optimal download speeds.
-
----
-
-#### 1.3 Enhance `pacman` Configuration
-
-**Enable `pacman` Features**  
-Enable colored output, fancy progress bars, and parallel downloads (up to 20):
-
-```bash
-sed -i "/etc/pacman.conf" \
-    -e "s|^#Color|&\nColor\nILoveCandy|" \
-    -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
-    -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
-```
-
-> [!IMPORTANT]  
-> Enabling parallel downloads improves the installation speed, especially on fast connections.
-
----
-
-#### 1.4 Initialize Keyrings
-
-1. **Install and Update Keyrings**  
-   Ensure your system has the latest keyrings for signed package installations:
-
-   ```bash
-   pacman -S --noconfirm archlinux-keyring
-   ```
-
-2. **Initialize Keyring**  
-   Initialize the keyring so that it can validate package signatures:
-
-   ```bash
-   pacman-key --init
-   ```
-
-3. **Final Package Database Refresh**  
-   Perform a final refresh of the package database after updating the keyrings:
-
-   ```bash
-   pacman -Syy
-   ```
-
----
+### 2. Disk formatting
