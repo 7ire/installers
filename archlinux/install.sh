@@ -29,7 +29,14 @@ DE=""                                             ## Desktop environment
 [ "$part2_fs" = "btrfs" ] && EXTRA+=" btrfs-progs"
 [ "$bootldr" = "grub" ] && BOOTLOADER+=" grub"
 [ "$bootldr" = "systemd-boot" ] && BOOTLOADER+=" systemd-boot"
-USR_EXT_PKGS=$(IFS=" "; echo "${pkgs[*]}")         ## User extra packages
+
+# Ensure 'pkgs' array is not empty
+if [ -z "${pkgs[*]}" ]; then
+  echo "Warning: No extra packages defined in 'pkgs'."
+else
+  USR_EXT_PKGS=$(IFS=" "; echo "${pkgs[*]}")  # User extra packages
+fi
+
 if [ "$de" = "gnome" ]; then
     ## GNOME packages
     DE="gdm gnome-shell gnome-keybindings power-profiles-daemon"
@@ -39,7 +46,7 @@ if [ "$de" = "gnome" ]; then
     DE+=" polkit polkit-gnome gnome-keyring"
     [ "$bluetooth" = "yes" ] && DE+=" gnome-bluetooth-3.0"  # Bluetooth package
 elif [ "$de" = "kde" ]; then
-    : # W.I.P. (Work in progress)
+    # W.I.P.
 fi
 
 # Utility functions
