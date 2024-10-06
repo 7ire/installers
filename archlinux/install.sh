@@ -63,7 +63,8 @@ loadkeys $keyboard                     # Set keyboard layout
 timedatectl set-ntp true &> /dev/null  # Enable NTP for time synchronization
 pacman -Syy &> /dev/null               # Refresh package manager database(s)
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup  # Backup current mirrorlist
-reflector --country "${reflector_countries}" \               # Search for better mirror(s)
+# Search for better mirror(s)
+reflector --country "${reflector_countries}" \
             --protocol https \
             --age 6 \
             --sort rate \
@@ -105,7 +106,7 @@ if [ "$encrypt" = "yes" ]; then
     sgdisk -t 2:8309 $target &> /dev/null  # Set partition 2 type to LUKS
     partprobe "$target" &> /dev/null       # Inform system of disk changes
     # Encrypt root partition
-    echo -n "$encrypt_key" | cryptsetup --type $encrypt_type -v -y luksFormat ${target_part}2 --key-file=- &> /dev/null
+    echo -n "$encrypt_key" | cryptsetup --type $encrypt_type -v -y --batch-mode luksFormat ${target_part}2 --key-file=- &> /dev/null
     echo -n "$encrypt_key" | cryptsetup open --perf-no_read_workqueue --perf-no_write_workqueue --persistent ${target_part}2 $encrypt_label --key-file=- &> /dev/null
     root_device="/dev/mapper/${encrypt_label}"  # Set root to encrypted partition
 else
