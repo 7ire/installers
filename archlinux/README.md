@@ -594,8 +594,8 @@ This section covers enabling network services, setting up mirrors, configuring t
   systemctl enable NetworkManager-wait-online.service
   ```
 
-  > [!TIP]
-  > `NetworkManager-wait-online` ensures that the system waits for a stable network connection before proceeding with boot tasks.
+> [!TIP]
+> `NetworkManager-wait-online` ensures that the system waits for a stable network connection before proceeding with boot tasks.
 
 #### Set Up Mirrors
 
@@ -611,8 +611,8 @@ This section covers enabling network services, setting up mirrors, configuring t
             --save /etc/pacman.d/mirrorlist
   ```
 
-  > [!TIP]
-  > Adjust the countries based on your geographical location to get the best download speeds.
+> [!TIP]
+> Adjust the countries based on your geographical location to get the best download speeds.
 
 - **Enable Reflector for periodic updates**: Enable the `reflector` service and timer to periodically update the mirrorlist.
 
@@ -621,8 +621,8 @@ This section covers enabling network services, setting up mirrors, configuring t
   systemctl enable reflector.timer
   ```
 
-  > [!NOTE]
-  > This ensures that your mirrorlist stays optimized automatically.
+> [!NOTE]
+> This ensures that your mirrorlist stays optimized automatically.
 
 #### Firewall Configuration
 
