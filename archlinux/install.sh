@@ -59,8 +59,11 @@ print_info() { print_debug "36" "$1"; }
 # ------------------------------------------------------------------------------
 print_info "[*] Preparing the machine for installation..."
 
+print_info "    - loading keyboard layout"
 loadkeys $keyboard                     # Set keyboard layout
+print_info "    - enabling NTP"
 timedatectl set-ntp true &> /dev/null  # Enable NTP for time synchronization
+print_info "    - updating mirrorlist"
 pacman -Syy &> /dev/null               # Refresh package manager database(s)
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup  # Backup current mirrorlist
 # Search for better mirror(s)
@@ -69,11 +72,13 @@ reflector --country "${reflector_countries}" \
             --age 6 \
             --sort rate \
             --save /etc/pacman.d/mirrorlist &> /dev/null
+print_info "    - configuring pacman"
 # Enable colored output, fancy progress bar, verbose package lists, and parallel downloads (20)
 sed -i "/etc/pacman.conf" \
     -e "s|^#Color|&\nColor\nILoveCandy|" \
     -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
     -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+print_info "    - updating keyring(s)"
 pacman -S --noconfirm archlinux-keyring &> /dev/null  # Download updated keyrings
 pacman-key --init &> /dev/null                        # Initialize newer keyrings
 pacman -Syy &> /dev/null                              # Refresh package manager database(s)
@@ -87,22 +92,27 @@ print_success "[+] The machine is ready for the installation!"
 # ------------------------------------------------------------------------------
 print_info "[*] Formatting the disk..."
 
+print_info "    - unmounting all"
 umount -A --recursive /mnt &> /dev/null          # Ensure everything is unmounted
+print_info "    - wiping data"
 # Wipe data(s)
 wipefs -af "$target" &> /dev/null                # Wipe all data
 sgdisk --zap-all --clear "$target" &> /dev/null  # Clear partition table
 sgdisk -a 2048 -o "$target" &> /dev/null         # Align sectors to 2048
 partprobe "$target" &> /dev/null                 # Inform system of disk changes
+print_info "    - filling with rnd data(s)"
 # Fill disk with random data for security
 cryptsetup open --type plain -d /dev/urandom $target target &> /dev/null
 dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev/null
 cryptsetup close target
+print_info "    - partitioning disk"
 # Partition the target disk
 sgdisk -n 0:0:+${part1_size} -t 0:ef00 -c 0:ESP $target &> /dev/null  # EFI partition
 sgdisk -n 0:0:0 -t 0:8300 -c 0:rootfs $target &> /dev/null            # Root partition
 partprobe "$target" &> /dev/null                                      # Inform system of disk changes
 # (Optional) Encrypt the root partition
 if [ "$encrypt" = "yes" ]; then
+    print_info "    - encrypting disk"
     sgdisk -t 2:8309 $target &> /dev/null  # Set partition 2 type to LUKS
     partprobe "$target" &> /dev/null       # Inform system of disk changes
     # Encrypt root partition
@@ -113,6 +123,7 @@ else
     root_device=${target_part}2                 # Set root to non-encrypted partition
 fi
 
+print_info "    - formatting partitions and mounting"
 mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null  # Format the EFI partition
 
 if [ "$part2_fs" = "btrfs" ]; then
@@ -161,8 +172,10 @@ print_success "[+] Disk formatting completed."
 # ------------------------------------------------------------------------------
 print_info "[*] Installing the base system..."
 
+print_info "    - installing base packages"
 # Install base system packages
 pacstrap /mnt $LNX $BASE $CPU $BOOTLOADER $NETWORK $CRYPT $EXTRA &> /dev/null
+print_info "    - generating fstab"
 genfstab -U -p /mnt >> /mnt/etc/fstab &> /dev/null  # Generate fstab file table
 
 print_success "[+] Base system installation completed."
