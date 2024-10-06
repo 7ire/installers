@@ -38,9 +38,8 @@ if [ "$de" = "gnome" ]; then
     ## Authentication packages
     DE+=" polkit polkit-gnome gnome-keyring"
     [ "$bluetooth" = "yes" ] && DE+=" gnome-bluetooth-3.0"  # Bluetooth package
-fi
-if [ "$de" = "kde" ]; then
-    # W.I.P.
+elif [ "$de" = "kde" ]; then
+    : # W.I.P. (Work in progress)
 fi
 
 # Utility functions
