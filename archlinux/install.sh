@@ -251,7 +251,8 @@ systemctl enable NetworkManager-wait-online.service &> /dev/null  # Extra servic
 # Mirror(s)
 pacman -S --noconfirm reflector &> /dev/null                 # Install 'reflector'
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup  # Backup current mirrorlist
-reflector --country "${reflector_countries}" \               # Search for better mirror(s)
+# Search for better mirror(s)
+reflector --country "${reflector_countries}" \
             --protocol https \
             --age 6 \
             --sort rate \
