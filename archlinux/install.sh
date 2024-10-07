@@ -123,10 +123,11 @@ else
     root_device=${target_part}2                 # Set root to non-encrypted partition
 fi
 
-print_info "    - formatting partitions and mounting"
+print_info "    - formatting partitions and mounting (EFI)"
 mkfs.vfat -F32 -n $part1_label ${target_part}1 &> /dev/null  # Format the EFI partition
 
 if [ "$part2_fs" = "btrfs" ]; then
+    print_info "    - formatting partitions and mounting (root - btrfs)"
     mkfs.btrfs -L $part2_label $root_device &> /dev/null  # Format as Btrfs
     mount $root_device /mnt                               # Mount root
     # Create Btrfs subvolumes
@@ -156,6 +157,7 @@ if [ "$part2_fs" = "btrfs" ]; then
         mount -o ${BTRFS_SV_OPTS},subvol=@${btrfs_subvols[$i]} $root_device /mnt${btrfs_subvols_mount[$i]}
     done
 else
+    print_info "    - formatting partitions and mounting (root - ext4)"
     mkfs.ext4 -L $part2_label $root_device &> /dev/null  # Format as EXT4
     mount $root_device /mnt                              # Mount root
 fi
@@ -188,12 +190,15 @@ arch-chroot /mnt /bin/bash
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring the system..."
 
+print_info "    - setting system hostname"
 echo "$hostname" > /etc/hostname  # Set system hostname
+print_info "    - configuring /etc/hosts"
 cat > /etc/hosts << EOF           # Configure /etc/hosts for local hostname resolution
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   ${hostname}.localdomain ${hostname}
 EOF
+print_info "    - setting system language and locale"
 sed -i "s/^#\(${lang}\)/\1/" /etc/locale.gen  # Enable the desired primary locale in /etc/locale.gen
 for locale in "${extra_lang[@]}"; do          # Enable additional locales, if any
   sed -i "s/^#\(${locale}\)/\1/" /etc/locale.gen
@@ -201,6 +206,7 @@ done
 echo "LANG=${lang}" > /etc/locale.conf         # Set system language/locale
 echo "LC_TIME=${lc_time}" >> /etc/locale.conf  # Set locale for time display
 locale-gen &> /dev/null                        # Generate locale
+print_info "    - setting system timezone and keyboard layout"
 # Set system timezone and sync hardware clock
 ln -sf /usr/share/zoneinfo/"$timezone" /etc/localtime &> /dev/null
 hwclock --systohc &> /dev/null
@@ -215,10 +221,13 @@ print_success "[+] System configuration completed."
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring system root user and local user ..."
 
+print_info "    - setting root password"
 echo "root:$rootpwd" | chpasswd &> /dev/null        # Set root password
+print_info "    - creating new user"
 # Add new user, assign to 'wheel' group, and set Bash as default shell
 useradd -m -G wheel -s /bin/bash "$username" &> /dev/null
 echo "$username:$password" | chpasswd &> /dev/null  # Set user password
+print_info "    - configuring user group (wheel)"
 # Enable sudo for 'wheel' group
 sed -i "s/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/" /etc/sudoers &> /dev/null
 
@@ -231,11 +240,13 @@ print_success "[+] User(s) configuration completed!"
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring pacman..."
 
+print_info "    - configuring pacman"
 # Enable colored output, fancy progress bar, verbose package lists, and parallel downloads (20)
 sed -i "/etc/pacman.conf" \
     -e "s|^#Color|&\nColor\nILoveCandy|" \
     -e "s|^#VerbosePkgLists|&\nVerbosePkgLists|" \
     -e "s|^#ParallelDownloads.*|&\nParallelDownloads = 20|"
+print_info "    - configuring makepkg 'QoL'"
 # Improve 'Makepkg' QoL
 sed -i "/etc/makepkg.conf" \
     -e "s|^#BUILDDIR=.*|&\nBUILDDIR=/var/tmp/makepkg|" \
@@ -244,8 +255,10 @@ sed -i "/etc/makepkg.conf" \
     -e "s|-march=.* -mtune=generic|-march=native|" \
     -e "s|^#RUSTFLAGS=.*|&\nRUSTFLAGS=\"-C opt-level=2 -C target-cpu=native\"|" \
     -e "s|^#MAKEFLAGS=.*|&\nMAKEFLAGS=\"-j$(($(nproc --all)-1))\"|"
+print_info "    - installing pacman utils and scripts"
 pacman -S --noconfirm pacman-contrib &> /dev/null  # pacman utils & scripts
 systemctl enable paccache.timer &> /dev/null       # Enable automatic cache cleaning (every week)
+print_info "    - enabling multilib repository"
 sed -i '/\[multilib\]/,/Include/s/^#//' /etc/pacman.conf  # Enable multilib repository
 pacman -Syy &> /dev/null                                  # Refresh package manager database(s)
 
@@ -258,9 +271,11 @@ print_success "[+] Pacman configuration completed."
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring base services..."
 
+print_info "    - configuring network service"
 # Network
 systemctl enable NetworkManager.service &> /dev/null              # Enable 'NetworkManager'
 systemctl enable NetworkManager-wait-online.service &> /dev/null  # Extra service
+print_info "    - configuring mirrorlist"
 # Mirror(s)
 pacman -S --noconfirm reflector &> /dev/null                 # Install 'reflector'
 cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup  # Backup current mirrorlist
@@ -272,6 +287,7 @@ reflector --country "${reflector_countries}" \
             --save /etc/pacman.d/mirrorlist &> /dev/null
 systemctl enable reflector.service &> /dev/null              # Enable 'reflector' 
 systemctl enable reflector.timer &> /dev/null                # Periodic update
+print_info "    - configuring firewall"
 # Firewall
 pacman -S --noconfirm nftables &> /dev/null  # Install 'nftables'
 NFTABLES_CONF="/etc/nftables.conf"           # Configuration file
@@ -301,6 +317,7 @@ table inet filter {
 }
 EOF"
 systemctl enable nftables &> /dev/null       # Enable 'nftables'
+print_info "    - configuring kernel parameters"
 # Kernel network parameters
 SYSCTL_CONF="/etc/sysctl.d/90-network.conf"  # Configuration file
 bash -c "cat << EOF > $SYSCTL_CONF
@@ -326,6 +343,7 @@ EOF"
 sysctl --system &> /dev/null  # Apply sysctl settings
 # SSDs
 if [ "is_ssd" = "yes" ]; then
+    print_info "    - configuring SSD optimizations"
     pacman -S --noconfirm util-linux &> /dev/null     # Install 'util-linux'
     systemctl enable --now fstrim.timer &> /dev/null  # Enable fstrim
 fi
@@ -341,11 +359,13 @@ print_info "[*] Configuring initial ramdisk ..."
 
 # Key decryption file (to prevent double asking of the passkey)
 if [ "$encrypt" = "yes" ]; then
+    print_info "    - configuring encryption keyfile"
     # Generate keyfile for LUKS encryption
     dd bs=512 count=4 iflag=fullblock if=/dev/random of=/key.bin &> /dev/null
     chmod 600 /key.bin &> /dev/null                                        # Restrict keyfile access
     cryptsetup luksAddKey "${target_part}2" /key.bin &> /dev/null          # Add keyfile to LUKS
     sed -i '/^FILES=/ s/)/ \/key.bin)/' /etc/mkinitcpio.conf &> /dev/null  # Add keyfile to mkinitcpio
+    print_info "    - configuring mkinitcpio (w/ encryption)"
     if [ "$part2_fs" = "btrfs" ]; then
         # Hooks for encryption and btrfs
         sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block encrypt btrfs filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
@@ -354,6 +374,7 @@ if [ "$encrypt" = "yes" ]; then
         sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
     fi
 else
+    print_info "    - configuring mkinitcpio"
     # Hooks without encryption
     if [ "$part2_fs" = "btrfs" ]; then
         sed -i '/^HOOKS=/ s/(.*)/(base udev keyboard autodetect microcode keymap consolefont modconf block btrfs filesystems fsck)/' /etc/mkinitcpio.conf &> /dev/null
@@ -365,6 +386,7 @@ fi
 if [ "$part2_fs" = "btrfs" ]; then
     sed -i '/^MODULES=/ s/)/ btrfs)/' /etc/mkinitcpio.conf &> /dev/null
 fi
+print_info "    - generating initial ramdisk"
 mkinitcpio -P &> /dev/null  # Generate the initial ramdisk
 
 print_success "[+] Initial ramdisk configuration completed!"
@@ -377,6 +399,7 @@ print_success "[+] Initial ramdisk configuration completed!"
 print_info "[*] Configuring the bootloader ..."
 
 if [ "$bootldr" = "grub" ]; then
+    print_info "    - configuring GRUB"
     cp /etc/default/grub /etc/default/grub.backup  # Backup current GRUB configuration
     # Update GRUB settings
     sed -i "s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=30/" /etc/default/grub                          # Timeout = 30s
@@ -386,16 +409,19 @@ if [ "$bootldr" = "grub" ]; then
     sed -i "s/^#GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/" /etc/default/grub  # Os-prober
     # UUID 4 encrypt disk
     if [ "$encrypt" = "yes" ]; then
+        print_info "    - configuring GRUB for encrypted disk"
         uuid=$(blkid -s UUID -o value ${target_part}2)  # Get UUID of the encrypted partition
         # Update GRUB for encrypted disk
         sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 cryptdevice=UUID=$uuid:cryptdev\"/" /etc/default/grub
         sed -i "s/^GRUB_PRELOAD_MODULES=.*/GRUB_PRELOAD_MODULES=\"part_gpt part_msdos luks\"/" /etc/default/grub
         sed -i "s/^#GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub
     fi
+    print_info "    - installing GRUB (w/ new config)"
     # Install GRUB to EFI partition
     grub-install --target=x86_64-efi --efi-directory=/${part1_mount} --bootloader-id=GRUB --modules="tpm" --disable-shim-lock
     grub-mkconfig -o /boot/grub/grub.cfg       # Generate GRUB configuration
     if [ "$secure_boot" = "yes" ]; then
+        print_info "    - configuring secure boot"
         # Secure boot (make sure system secure boot is in 'Setup mode')
         pacman -S --noconfirm sbctl &> /dev/null   # Install 'sbctl'
         sbctl create-keys && sbctl enroll-keys -m  # Create and enroll secure boot keys
@@ -439,22 +465,28 @@ print_success "[+] Audio driver installation completed!"
 print_info "[*] Installing graphics driver ..."
 
 if [ "gpu" = "nvidia" ]; then
+    print_info "    - installing NVIDIA driver"
     pacman -S --noconfirm nvidia-open nvidia-open-dkms \
                     nvidia-utils opencl-nvidia \
                     lib32-nvidia-utils lib32-opencl-nvidia \
                     nvidia-settings &> /dev/null
+    print_info "    - configuring NVIDIA driver"
     # Add necessary kernel modules and udev rules
     sed -i '/^MODULES=/ s/(\(.*\))/(\1 nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
     sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia_drm.modeset=1"/' /etc/default/grub
     bash -c 'echo "ACTION==\"add\", DEVPATH==\"/bus/pci/drivers/nvidia\", RUN+=\"/usr/bin/nvidia-modprobe -c 0 -u\"" > /etc/udev/rules.d/70-nvidia.rules'
     bash -c 'echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" > /etc/modprobe.d/nvidia-power-mgmt.conf'
+    print_info "    - generating initial ramdisk and GRUB configuration"
     mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
 elif [ "gpu" = "intel" ]; then
+    print_info "    - installing Intel driver"
     pacman -S --noconfirm mesa lib32-mesa \
                     intel-media-driver libva-intel-driver \
                     vulkan-intel lib32-vulkan-intel &> /dev/null
+    print_info "    - configuring Intel driver kernel modules"
     sed -i '/^MODULES=/ s/(\(.*\))/(\1 i915)/' /etc/mkinitcpio.conf  # Add i915 to modules
+    print_info "    - generating initial ramdisk and GRUB configuration"
     mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
 fi
@@ -469,12 +501,15 @@ su $username
 # ------------------------------------------------------------------------------
 print_info "[*] User extra configuration ..."
 
+print_info "    - installing and configuring default editor"
 sudo pacman -S --noconfirm $editor &> /dev/null  # Install default editor
 echo "EDITOR=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default editor
 echo "VISUAL=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default visual editor
+print_info "    - installing extra packages"
 sudo pacman -S --noconfirm $USR_EXT_PKGS &> /dev/null  # Install additional packages
 # Install AUR helper (paru or yay)
 if [ "$aur" = "paru" ]; then
+    print_info "    - installing AUR helper (paru)"
     git clone https://aur.archlinux.org/paru.git /tmp/paru &> /dev/null
     cd /tmp/paru
     makepkg -si --noconfirm &> /dev/null
@@ -482,6 +517,7 @@ if [ "$aur" = "paru" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     paru -Syyu --noconfirm &> /dev/null
 elif [ "$aur" = "yay" ]; then
+    print_info "    - installing AUR helper (yay)"
     git clone https://aur.archlinux.org/yay.git /tmp/yay &> /dev/null
     cd /tmp/yay
     makepkg -si --noconfirm &> /dev/null
@@ -489,6 +525,7 @@ elif [ "$aur" = "yay" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     yay -Syyu --noconfirm &> /dev/null
 fi
+print_info "    - installing QoL packages"
 # QoL
 ${aur} -S --noconfirm pkgfile &> /dev/null       # Install 'pkgfile'
 sudo pkgfile --update &> /dev/null               # Update 'pkgfile' database(s)
@@ -510,11 +547,13 @@ fi
 # Install and enable optional services
 # SSH
 if [ "$ssh" = "yes" ]; then
-  sudo pacman -S --noconfirm openssh &> /dev/null  # Install 'openSSH'
-  sudo systemctl enable sshd.service &> /dev/null  # Enable 'sshd'
+    print_info "    - installing and configuring SSH"
+    sudo pacman -S --noconfirm openssh &> /dev/null  # Install 'openSSH'
+    sudo systemctl enable sshd.service &> /dev/null  # Enable 'sshd'
 fi
 # Bluetooth
 if [ "$bluetooth" = "yes" ]; then
+    print_info "    - installing and configuring Bluetooth"
     # Install Bluetooth packages
     sudo pacman -S --noconfirm bluez bluez-utils bluez-tools &> /dev/null
     BLUETOOTH_CONF="/etc/bluetooth/main.conf"  # Configuration file
@@ -537,6 +576,7 @@ if [ "$bluetooth" = "yes" ]; then
 fi
 # Printer
 if [ "$printer" = "yes" ]; then
+    print_info "    - installing and configuring printer"
     sudo pacman -S --noconfirm cups cups-pdf bluez-cups &> /dev/null  # Install 'cups' and related packages
     sudo systemctl enable cups.service &> /dev/null                   # Enable 'cups'
 fi
@@ -551,9 +591,11 @@ print_success "[+] User extra configuration completed!"
 print_info "[*] Configuring desktop environment ..."
 
 if [ "$de" = "gnome" ]; then
+    print_info "    - installing GNOME"
     sudo pacman -S --noconfirm $DE &> /dev/null                                     # Install GNOME packages
     sudo ln -sf /dev/null /etc/udev/rules.d/61-gdm.rules                            # Disable GDM rule
     sudo sed -i 's/^#WaylandEnable=false/WaylandEnable=true/' /etc/gdm/custom.conf  # Enable Wayland in GDM
+    print_info "    - configuring GNOME (keybinds)"
     # GNOME Keybinds - support vars
     KEYS_GNOME_WM=/org/gnome/desktop/wm/keybindings
     KEYS_GNOME_SHELL=/org/gnome/shell/keybindings
@@ -626,6 +668,7 @@ if [ "$de" = "gnome" ]; then
         libreoffice-extension-writer2latex  # LibreOffice extensions for converting to and working with LaTeX in LibreOffice
     )
     ${aur} -Syy &> /dev/null  # Refresh package manager database(s)
+    print_info "    - configuring GNOME (packages)"
     # Install packages
     ${aur} -S --noconfirm "${BASE_PKG[@]}" &> /dev/null
     ${aur} -S --noconfirm "${APP_PKG[@]}" &> /dev/null
@@ -647,6 +690,7 @@ if [ "$de" = "gnome" ]; then
         gnome-shell-extension-openweatherrefined             # Display weather for the current or a specified location in the GNOME shell
         gnome-shell-extension-weather-oclock                 # Displays the current weather inside the pill next to the clock
     )
+    print_info "    - configuring GNOME (extensions)"
     ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
     sudo systemctl enable gdm.service  # Enable GDM service
 elif [ "$de" = "kde" ]; then
