@@ -694,6 +694,9 @@ if [ "$de" = "gnome" ]; then
         gnome-shell-extension-openweatherrefined             # Display weather for the current or a specified location in the GNOME shell
         gnome-shell-extension-weather-oclock                 # Displays the current weather inside the pill next to the clock
         gnome-shell-extension-top-bar-organizer              # Gnome: Organize the items of the top (menu)bar
+        gnome-shell-extension-bluetooth-quick-connect        # Allow to connect Bluetooth paired devices from GNOME control panel.
+        gnome-shell-extension-extension-list                 # A Simple GNOME Shell extension manager in the top panel
+        gnome-shell-extension-clipboard-indicator            # Adds a clipboard indicator to the top panel, and caches clipboard history
     )
     print_info "    - configuring GNOME (extensions)"
     ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
