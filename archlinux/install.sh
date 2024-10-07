@@ -184,7 +184,7 @@ print_success "[+] Base system installation completed."
 
 
 
-arch-chroot /mnt /bin/bash
+arch-chroot /mnt /bin/bash -c <<"EOT"
 # ------------------------------------------------------------------------------
 #                              System Configuration
 # ------------------------------------------------------------------------------
@@ -706,6 +706,7 @@ elif [ "$de" = "kde" ]; then
 fi
 
 print_success "[+] Desktop environment configuration completed!"
+EOT
 
 
 
