@@ -435,15 +435,15 @@ if [ "$bootldr" = "grub" ]; then
     if [ "$secure_boot" = "yes" ]; then
         print_info "    - configuring secure boot"
         # Secure boot (make sure system secure boot is in 'Setup mode')
-        pacman -S --noconfirm sbctl &> /dev/null   # Install 'sbctl'
-        sbctl create-keys && sbctl enroll-keys -m  # Create and enroll secure boot keys
+        pacman -S --noconfirm sbctl &> /dev/null                # Install 'sbctl'
+        sbctl create-keys && sbctl enroll-keys -m  &> /dev/null # Create and enroll secure boot keys
         # Sign the necessary files
         sbctl sign -s /${part1_mount}/EFI/GRUB/grubx64.efi \
                 -s /${part1_mount}/grub/x86_64-efi/core.efi \
                 -s /${part1_mount}/grub/x86_64-efi/grub.efi \
                 -s /${part1_mount}/vmlinuz-linux-zen &> /dev/null
     fi
-elif [ "$bootldr" = "systemd-boot" ]; then
+# elif [ "$bootldr" = "systemd-boot" ]; then
     # W.I.P.
 fi
 
@@ -465,7 +465,10 @@ pacman -S --noconfirm pipewire lib32-pipewire \
                 pipewire-pulse \
                 pipewire-docs &> /dev/null
 
-systemctl enable pipewire pipewire-pulse  # Enable services
+systemctl --user disable pulseaudio.service pulseaudio.socket &> /dev/null
+systemctl --user stop pulseaudio.service pulseaudio.socket &> /dev/null
+systemctl --user enable pipewire pipewire-pulse &> /dev/null
+systemctl --user start pipewire pipewire-pulse &> /dev/null
 
 print_success "[+] Audio driver installation completed!"
 
@@ -489,8 +492,8 @@ if [ "gpu" = "nvidia" ]; then
     bash -c 'echo "ACTION==\"add\", DEVPATH==\"/bus/pci/drivers/nvidia\", RUN+=\"/usr/bin/nvidia-modprobe -c 0 -u\"" > /etc/udev/rules.d/70-nvidia.rules'
     bash -c 'echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" > /etc/modprobe.d/nvidia-power-mgmt.conf'
     print_info "    - generating initial ramdisk and GRUB configuration"
-    mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
-    grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
+    mkinitcpio -P &> /dev/null                         # Generate the initial ramdisk
+    grub-mkconfig -o /boot/grub/grub.cfg &> /dev/null  # Generate GRUB configuration
 elif [ "gpu" = "intel" ]; then
     print_info "    - installing Intel driver"
     pacman -S --noconfirm mesa lib32-mesa \
@@ -499,8 +502,8 @@ elif [ "gpu" = "intel" ]; then
     print_info "    - configuring Intel driver kernel modules"
     sed -i '/^MODULES=/ s/(\(.*\))/(\1 i915)/' /etc/mkinitcpio.conf  # Add i915 to modules
     print_info "    - generating initial ramdisk and GRUB configuration"
-    mkinitcpio -P &> /dev/null            # Generate the initial ramdisk
-    grub-mkconfig -o /boot/grub/grub.cfg  # Generate GRUB configuration
+    mkinitcpio -P &> /dev/null                         # Generate the initial ramdisk
+    grub-mkconfig -o /boot/grub/grub.cfg &> /dev/null  # Generate GRUB configuration
 fi
 
 print_success "[+] Graphics driver installation completed!"
@@ -734,7 +737,5 @@ EOT
 
 
 
-exit            # Exit user
-exit            # Exit arch-chroot
 umount -R /mnt  # Unmount all device(s)
 reboot now      # Reboot
