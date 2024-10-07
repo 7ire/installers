@@ -102,7 +102,7 @@ sgdisk -a 2048 -o "$target" &> /dev/null         # Align sectors to 2048
 partprobe "$target" &> /dev/null                 # Inform system of disk changes
 print_info "    - filling with rnd data(s)"
 # Fill disk with random data for security
-cryptsetup open --type plain -d /dev/urandom $target target &> /dev/null
+cryptsetup open --type plain --batch-mode -d /dev/urandom $target target &> /dev/null
 dd if=/dev/zero of=/dev/mapper/target bs=1M status=progress oflag=direct &> /dev/null
 cryptsetup close target
 print_info "    - partitioning disk"
