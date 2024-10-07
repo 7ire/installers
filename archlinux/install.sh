@@ -183,8 +183,20 @@ genfstab -U -p /mnt >> /mnt/etc/fstab &> /dev/null  # Generate fstab file table
 print_success "[+] Base system installation completed."
 
 
+# Passaggio delle variabili dal file di configurazione all'interno del chroot
+env hostname="$hostname" lang="$lang" timezone="$timezone" keyboard="$keyboard" \
+extra_lang="${extra_lang[@]}" lc_time="$lc_time" rootpwd="$rootpwd" \
+username="$username" password="$password" reflector_countries="$reflector_countries" \
+is_ssd="$is_ssd" encrypt="$encrypt" part2_fs="$part2_fs" target_part="$target_part" \
+encrypt_key="$encrypt_key" part1_mount="$part1_mount" bootldr="$bootldr" \
+secure_boot="$secure_boot" gpu="$gpu" editor="$editor" USR_EXT_PKGS="$USR_EXT_PKGS" \
+aur="$aur" ssh="$ssh" bluetooth="$bluetooth" printer="$printer" de="$de" \
+arch-chroot /mnt /bin/bash <<"EOT"
+# Utility functions
+print_debug() { echo -e "\e[${1}m${2}\e[0m"; }
+print_success() { print_debug "32" "$1"; }
+print_info() { print_debug "36" "$1"; }
 
-arch-chroot /mnt /bin/bash -c <<"EOT"
 # ------------------------------------------------------------------------------
 #                              System Configuration
 # ------------------------------------------------------------------------------
@@ -706,6 +718,18 @@ elif [ "$de" = "kde" ]; then
 fi
 
 print_success "[+] Desktop environment configuration completed!"
+
+
+
+# ------------------------------------------------------------------------------
+#                              Post Boot Script(s)
+# ------------------------------------------------------------------------------
+cd /home/${username}
+# Btrfs snapshots
+wget https://raw.githubusercontent.com/atirelli3/installers/refs/heads/main/archlinux/scripts/btrfs-snapshot.sh
+chmod +x btrfs-snapshot.sh
+# Fingerprint reader
+
 EOT
 
 
