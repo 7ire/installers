@@ -424,19 +424,20 @@ if [ "$bootldr" = "grub" ]; then
         print_info "    - configuring GRUB for encrypted disk"
         uuid=$(blkid -s UUID -o value ${target_part}2)  # Get UUID of the encrypted partition
         # Update GRUB for encrypted disk
-        sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 cryptdevice=UUID=$uuid:cryptdev\"/" /etc/default/grub
+        sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 cryptdevice=UUID=${uuid}:cryptdev\"|" /etc/default/grub
         sed -i "s/^GRUB_PRELOAD_MODULES=.*/GRUB_PRELOAD_MODULES=\"part_gpt part_msdos luks\"/" /etc/default/grub
         sed -i "s/^#GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/" /etc/default/grub
     fi
     print_info "    - installing GRUB (w/ new config)"
     # Install GRUB to EFI partition
     grub-install --target=x86_64-efi --efi-directory=/${part1_mount} --bootloader-id=GRUB --modules="tpm" --disable-shim-lock
-    grub-mkconfig -o /boot/grub/grub.cfg       # Generate GRUB configuration
+    grub-mkconfig -o /boot/grub/grub.cfg &> /dev/null # Generate GRUB configuration
     if [ "$secure_boot" = "yes" ]; then
         print_info "    - configuring secure boot"
         # Secure boot (make sure system secure boot is in 'Setup mode')
-        pacman -S --noconfirm sbctl &> /dev/null                # Install 'sbctl'
-        sbctl create-keys && sbctl enroll-keys -m  &> /dev/null # Create and enroll secure boot keys
+        pacman -S --noconfirm sbctl &> /dev/null  # Install 'sbctl'
+        sbctl create-keys &> /dev/null            # Create secure boot keys
+        sbctl enroll-keys -m &> /dev/null         # Enroll secure boot keys
         # Sign the necessary files
         sbctl sign -s /${part1_mount}/EFI/GRUB/grubx64.efi \
                 -s /${part1_mount}/grub/x86_64-efi/core.efi \
@@ -510,21 +511,18 @@ print_success "[+] Graphics driver installation completed!"
 
 
 
-su $username
 # ------------------------------------------------------------------------------
 #                           (User) Extra Configuration
 # ------------------------------------------------------------------------------
 print_info "[*] User extra configuration ..."
 
-print_info "    - installing and configuring default editor"
+su $username
 sudo pacman -S --noconfirm $editor &> /dev/null  # Install default editor
 echo "EDITOR=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default editor
 echo "VISUAL=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default visual editor
-print_info "    - installing extra packages"
 sudo pacman -S --noconfirm $USR_EXT_PKGS &> /dev/null  # Install additional packages
 # Install AUR helper (paru or yay)
 if [ "$aur" = "paru" ]; then
-    print_info "    - installing AUR helper (paru)"
     git clone https://aur.archlinux.org/paru.git /tmp/paru &> /dev/null
     cd /tmp/paru
     makepkg -si --noconfirm &> /dev/null
@@ -532,7 +530,6 @@ if [ "$aur" = "paru" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     paru -Syyu --noconfirm &> /dev/null
 elif [ "$aur" = "yay" ]; then
-    print_info "    - installing AUR helper (yay)"
     git clone https://aur.archlinux.org/yay.git /tmp/yay &> /dev/null
     cd /tmp/yay
     makepkg -si --noconfirm &> /dev/null
@@ -540,7 +537,6 @@ elif [ "$aur" = "yay" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     yay -Syyu --noconfirm &> /dev/null
 fi
-print_info "    - installing QoL packages"
 # QoL
 ${aur} -S --noconfirm pkgfile &> /dev/null       # Install 'pkgfile'
 sudo pkgfile --update &> /dev/null               # Update 'pkgfile' database(s)
@@ -595,6 +591,7 @@ if [ "$printer" = "yes" ]; then
     sudo pacman -S --noconfirm cups cups-pdf bluez-cups &> /dev/null  # Install 'cups' and related packages
     sudo systemctl enable cups.service &> /dev/null                   # Enable 'cups'
 fi
+exit
 
 print_success "[+] User extra configuration completed!"
 
@@ -605,12 +602,11 @@ print_success "[+] User extra configuration completed!"
 # ------------------------------------------------------------------------------
 print_info "[*] Configuring desktop environment ..."
 
+su $username
 if [ "$de" = "gnome" ]; then
-    print_info "    - installing GNOME"
     sudo pacman -S --noconfirm $DE &> /dev/null                                     # Install GNOME packages
     sudo ln -sf /dev/null /etc/udev/rules.d/61-gdm.rules                            # Disable GDM rule
     sudo sed -i 's/^#WaylandEnable=false/WaylandEnable=true/' /etc/gdm/custom.conf  # Enable Wayland in GDM
-    print_info "    - configuring GNOME (keybinds)"
     # GNOME Keybinds - support vars
     KEYS_GNOME_WM=/org/gnome/desktop/wm/keybindings
     KEYS_GNOME_SHELL=/org/gnome/shell/keybindings
@@ -629,7 +625,7 @@ if [ "$de" = "gnome" ]; then
     dconf write ${KEYS_MEDIA}/email "['<Super>m']"     # Launch email client
     dconf write ${KEYS_MEDIA}/home "['<Super>e']"      # Home folder
 
-    dconf write ${KEYS_MEDIA}/screensaver "['<Super>Escape']"  # Lock screen
+    dconf write ${KEYS_MEDIA}/screensaver    print_info "    - configuring GNOME (extensions)" "['<Super>Escape']"  # Lock screen
     # Workspaces - move to N workspace
     for i in {1..9}; do
         dconf write "${KEYS_GNOME_WM}/switch-to-workspace-${i}" "['<Super>${i}']" &> /dev/null
@@ -683,7 +679,6 @@ if [ "$de" = "gnome" ]; then
         libreoffice-extension-writer2latex  # LibreOffice extensions for converting to and working with LaTeX in LibreOffice
     )
     ${aur} -Syy &> /dev/null  # Refresh package manager database(s)
-    print_info "    - configuring GNOME (packages)"
     # Install packages
     ${aur} -S --noconfirm "${BASE_PKG[@]}" &> /dev/null
     ${aur} -S --noconfirm "${APP_PKG[@]}" &> /dev/null
@@ -713,10 +708,9 @@ if [ "$de" = "gnome" ]; then
         gnome-shell-extension-extension-list                 # A Simple GNOME Shell extension manager in the top panel
         gnome-shell-extension-clipboard-indicator            # Adds a clipboard indicator to the top panel, and caches clipboard history
     )
-    print_info "    - configuring GNOME (extensions)"
     ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
     sudo systemctl enable gdm.service  # Enable GDM service
-elif [ "$de" = "kde" ]; then
+# elif [ "$de" = "kde" ]; then
     # W.I.P.
 fi
 
