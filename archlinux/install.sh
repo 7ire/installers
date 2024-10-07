@@ -693,6 +693,7 @@ if [ "$de" = "gnome" ]; then
         gnome-shell-extension-runcat                         # Cat tells you the CPU usage by running speed
         gnome-shell-extension-openweatherrefined             # Display weather for the current or a specified location in the GNOME shell
         gnome-shell-extension-weather-oclock                 # Displays the current weather inside the pill next to the clock
+        gnome-shell-extension-top-bar-organizer              # Gnome: Organize the items of the top (menu)bar
     )
     print_info "    - configuring GNOME (extensions)"
     ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
