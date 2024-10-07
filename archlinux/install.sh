@@ -675,6 +675,10 @@ if [ "$de" = "gnome" ]; then
     ${aur} -S --noconfirm "${FILE_PKG[@]}" &> /dev/null
     ${aur} -S --noconfirm "${FILE_ADDON_PKG[@]}" &> /dev/null
     ${aur} -S --noconfirm "${OFFICE_PKG[@]}" &> /dev/null
+
+    # Add blackbox-terminal as "Open in terminal ..."
+    gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal blackbox-terminal
+
     # GNOME Extensions
     EXT_PKG=(
         gnome-shell-extension-blur-my-shell                  # Extension that adds a blur look to different parts of the GNOME Shell
