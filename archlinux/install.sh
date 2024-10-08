@@ -23,6 +23,10 @@ NETWORK="networkmanager"                          ## Network manager
 CRYPT="cryptsetup"                                ## Encryption
 EXTRA="sudo"                                      ## Extra packages
 DE=""                                             ## Desktop environment
+GNOME_EXT=""                                      ## GNOME extensions
+OFFICE="libreoffice-fresh"                        ## Office suite
+OFFICE+=" libreoffice-extension-texmaths"
+OFFICE+=" libreoffice-extension-writer2latex"
 
 # Conditional package addition
 [ "$encrypt" = "yes" ] && [ "$part2_fs" != "btrfs" ] && CRYPT+=" lvm2"
@@ -31,22 +35,92 @@ DE=""                                             ## Desktop environment
 [ "$bootldr" = "systemd-boot" ] && BOOTLOADER+=" systemd-boot"
 USR_EXT_PKGS=$(IFS=" "; echo "${pkgs[*]}")         ## User extra packages
 if [ "$de" = "gnome" ]; then
-    ## GNOME packages
-    DE="gdm gnome-shell gnome-keybindings power-profiles-daemon"
-    ## XDG packages
-    DE+=" xdg-user-dirs xdg-desktop-portal xdg-user-dirs-gtk xdg-desktop-portal-gnome"
+    ## GNOME core packages
+    DE="
+        gdm
+        gnome-shell
+        gnome-keybindings
+        power-profiles-daemon
+    "
+    ## XDG-related packages
+    DE+="
+        xdg-user-dirs
+        xdg-desktop-portal
+        xdg-user-dirs-gtk
+        xdg-desktop-portal-gnome
+    "
     ## Authentication packages
-    DE+=" polkit polkit-gnome gnome-keyring"
-    [ "$bluetooth" = "yes" ] && DE+=" gnome-bluetooth-3.0"  # Bluetooth package
+    DE+="
+        polkit
+        polkit-gnome
+        gnome-keyring
+    "
+    # Add Bluetooth package if enabled
+    [ "$bluetooth" = "yes" ] && DE+=" gnome-bluetooth-3.0" 
+    ## Base GNOME applications
+    DE+="
+        gnome-control-center
+        gnome-tweaks
+        mission-center
+        extension-manager
+        dconf-editor
+    "
+    ## Default GNOME applications
+    DE+="
+        nautilus
+        blackbox-terminal
+        firefox
+        thunderbird
+        gnome-calculator
+        gnome-calendar
+        gnome-text-editor
+        gnome-disk-utility
+        papers
+        loupe
+        clapper
+    "
+    ## GNOME Nautilus addons
+    DE+="
+        sushi
+        libnautilus-extension
+    "
+    ## GNOME Nautilus plugins
+    DE+="
+        nautilus-open-any-terminal
+        seahorse-nautilus
+        turtle
+        nautilus-open-in-code
+    "
+    ## GNOME extensions
+    GNOME_EXT="
+        gnome-shell-extensions
+        gnome-shell-extension-blur-my-shell
+        gnome-shell-extension-dash-to-dock
+        gnome-shell-extension-just-perfection-desktop
+        gnome-shell-extension-unite
+        gnome-shell-extension-rounded-window-corners-reborn
+        gnome-shell-extension-arc-menu
+        gnome-shell-extension-alphabetical-grid-extension
+        gnome-shell-extension-arch-update
+        gnome-shell-extension-runcat
+        gnome-shell-extension-extension-list
+        gnome-shell-extension-clipboard-indicator
+        gnome-shell-extension-top-bar-organizer
+        gnome-shell-extension-bluetooth-quick-connect
+        gnome-shell-extension-weather-oclock
+        gnome-shell-extension-openweatherrefined
+    "
 fi
+
 # elif [ "$de" = "kde" ]; then
 #     : # W.I.P. (Work in progress)
 # fi
 
 # Utility functions
 print_debug() { echo -e "\e[${1}m${2}\e[0m"; }
-print_success() { print_debug "32" "$1"; }
-print_info() { print_debug "36" "$1"; }
+print_success() { print_debug "32" "$1"; }  # Green
+print_info() { print_debug "36" "$1"; }     # Cyan
+print_warning() { print_debug "33" "$1";}   # Yellow
 
 # Check prerequisites => root privileges and system is in UEFI mode
 [ "$EUID" -ne 0 ] && { echo "Please run as root. Aborting script."; exit 1; }
@@ -57,7 +131,7 @@ print_info() { print_debug "36" "$1"; }
 # ------------------------------------------------------------------------------
 #                                  Preparation
 # ------------------------------------------------------------------------------
-print_info "[*] Preparing the machine for installation..."
+print_warning "[*] Preparing the machine for installation..."
 
 print_info "    - loading keyboard layout"
 loadkeys $keyboard                     # Set keyboard layout
@@ -90,7 +164,7 @@ print_success "[+] The machine is ready for the installation!"
 # ------------------------------------------------------------------------------
 #                                Disk Formatting
 # ------------------------------------------------------------------------------
-print_info "[*] Formatting the disk..."
+print_warning "[*] Formatting the disk..."
 
 print_info "    - unmounting all"
 umount -A --recursive /mnt &> /dev/null          # Ensure everything is unmounted
@@ -130,6 +204,7 @@ if [ "$part2_fs" = "btrfs" ]; then
     print_info "    - formatting partitions and mounting (root - btrfs)"
     mkfs.btrfs -L $part2_label $root_device &> /dev/null  # Format as Btrfs
     mount $root_device /mnt                               # Mount root
+    print_info "    - creating Btrfs subvolumes"
     # Create Btrfs subvolumes
     btrfs subvolume create /mnt/@ &> /dev/null           # System subvolume
     btrfs subvolume create /mnt/@home &> /dev/null       # Home subvolume
@@ -141,7 +216,8 @@ if [ "$part2_fs" = "btrfs" ]; then
     for subvol in "${btrfs_subvols[@]}"; do
         btrfs subvolume create /mnt/@$subvol &> /dev/null
     done
-    umount /mnt                                          # Unmount to remount with subvolume options
+    umount /mnt  # Unmount to remount with subvolume options
+    print_info "    - mounting Btrfs subvolumes"
     # Remount with Btrfs subvolumes
     mount -o ${BTRFS_SV_OPTS},subvol=@ $root_device /mnt &> /dev/null
     mkdir -p /mnt/{home,.snapshots,var/cache,var/log,var/tmp} &> /dev/null
@@ -172,7 +248,7 @@ print_success "[+] Disk formatting completed."
 # ------------------------------------------------------------------------------
 #                            Base System Installation
 # ------------------------------------------------------------------------------
-print_info "[*] Installing the base system..."
+print_warning "[*] Installing the base system..."
 
 print_info "    - installing base packages"
 # Install base system packages
@@ -194,13 +270,14 @@ aur="$aur" ssh="$ssh" bluetooth="$bluetooth" printer="$printer" de="$de" \
 arch-chroot /mnt /bin/bash <<"EOT"
 # Utility functions
 print_debug() { echo -e "\e[${1}m${2}\e[0m"; }
-print_success() { print_debug "32" "$1"; }
-print_info() { print_debug "36" "$1"; }
+print_success() { print_debug "32" "$1"; }  # Green
+print_info() { print_debug "36" "$1"; }     # Cyan
+print_warning() { print_debug "33" "$1";}   # Yellow
 
 # ------------------------------------------------------------------------------
 #                              System Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring the system..."
+print_warning "[*] Configuring the system..."
 
 print_info "    - setting system hostname"
 echo "$hostname" > /etc/hostname  # Set system hostname
@@ -231,7 +308,7 @@ print_success "[+] System configuration completed."
 # ------------------------------------------------------------------------------
 #                               User Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring system root user and local user ..."
+print_warning "[*] Configuring system root user and local user ..."
 
 print_info "    - setting root password"
 echo "root:$rootpwd" | chpasswd &> /dev/null        # Set root password
@@ -250,7 +327,7 @@ print_success "[+] User(s) configuration completed!"
 # ------------------------------------------------------------------------------
 #                              Pacman Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring pacman..."
+print_warning "[*] Configuring pacman..."
 
 print_info "    - configuring pacman"
 # Enable colored output, fancy progress bar, verbose package lists, and parallel downloads (20)
@@ -281,7 +358,7 @@ print_success "[+] Pacman configuration completed."
 # ------------------------------------------------------------------------------
 #                          Base Services Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring base services..."
+print_warning "[*] Configuring base services..."
 
 print_info "    - configuring network service"
 # Network
@@ -367,7 +444,7 @@ print_success "[+] Base services configuration completed!"
 # ------------------------------------------------------------------------------
 #                         Initial Ramdisk Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring initial ramdisk ..."
+print_warning "[*] Configuring initial ramdisk ..."
 
 # Key decryption file (to prevent double asking of the passkey)
 if [ "$encrypt" = "yes" ]; then
@@ -408,7 +485,7 @@ print_success "[+] Initial ramdisk configuration completed!"
 # ------------------------------------------------------------------------------
 #                                   Bootloader
 # ------------------------------------------------------------------------------
-print_info "[*] Configuring the bootloader ..."
+print_warning "[*] Configuring the bootloader ..."
 
 if [ "$bootldr" = "grub" ]; then
     print_info "    - configuring GRUB"
@@ -455,8 +532,9 @@ print_success "[+] Bootloader configuration completed!"
 # ------------------------------------------------------------------------------
 #                                Audio Driver(s)
 # ------------------------------------------------------------------------------
-print_info "[*] Installing audio driver ..."
+print_warning "[*] Installing audio driver ..."
 
+print_info "    - installing audio driver(s)"
 pacman -S --noconfirm pipewire lib32-pipewire \
                 pipewire-jack lib32-pipewire-jack \
                 wireplumber \
@@ -466,6 +544,7 @@ pacman -S --noconfirm pipewire lib32-pipewire \
                 pipewire-pulse \
                 pipewire-docs &> /dev/null
 
+print_info "    - enabling audio driver(s)"
 systemctl --user disable pulseaudio.service pulseaudio.socket &> /dev/null
 systemctl --user stop pulseaudio.service pulseaudio.socket &> /dev/null
 systemctl --user enable pipewire pipewire-pulse &> /dev/null
@@ -478,7 +557,7 @@ print_success "[+] Audio driver installation completed!"
 # ------------------------------------------------------------------------------
 #                               Graphics Driver(s)
 # ------------------------------------------------------------------------------
-print_info "[*] Installing graphics driver ..."
+print_warning "[*] Installing graphics driver ..."
 
 if [ "gpu" = "nvidia" ]; then
     print_info "    - installing NVIDIA driver"
@@ -492,7 +571,7 @@ if [ "gpu" = "nvidia" ]; then
     sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia_drm.modeset=1"/' /etc/default/grub
     bash -c 'echo "ACTION==\"add\", DEVPATH==\"/bus/pci/drivers/nvidia\", RUN+=\"/usr/bin/nvidia-modprobe -c 0 -u\"" > /etc/udev/rules.d/70-nvidia.rules'
     bash -c 'echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" > /etc/modprobe.d/nvidia-power-mgmt.conf'
-    print_info "    - generating initial ramdisk and GRUB configuration"
+    print_info "    - generating initial ramdisk and GRUB configuration (w/ NVIDIA modules)"
     mkinitcpio -P &> /dev/null                         # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg &> /dev/null  # Generate GRUB configuration
 elif [ "gpu" = "intel" ]; then
@@ -502,7 +581,7 @@ elif [ "gpu" = "intel" ]; then
                     vulkan-intel lib32-vulkan-intel &> /dev/null
     print_info "    - configuring Intel driver kernel modules"
     sed -i '/^MODULES=/ s/(\(.*\))/(\1 i915)/' /etc/mkinitcpio.conf  # Add i915 to modules
-    print_info "    - generating initial ramdisk and GRUB configuration"
+    print_info "    - generating initial ramdisk and GRUB configuration (w/ Intel modules)"
     mkinitcpio -P &> /dev/null                         # Generate the initial ramdisk
     grub-mkconfig -o /boot/grub/grub.cfg &> /dev/null  # Generate GRUB configuration
 fi
@@ -514,15 +593,19 @@ print_success "[+] Graphics driver installation completed!"
 # ------------------------------------------------------------------------------
 #                           (User) Extra Configuration
 # ------------------------------------------------------------------------------
-print_info "[*] User extra configuration ..."
+print_warning "[*] User extra configuration ..."
 
 su $username
+print_info "    - installing default editor"
 sudo pacman -S --noconfirm $editor &> /dev/null  # Install default editor
+print_info "    - configuring default editor"
 echo "EDITOR=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default editor
 echo "VISUAL=${editor}" | sudo tee -a /etc/environment > /dev/null  # Set the default visual editor
+print_info "    - installing user extra packages"
 sudo pacman -S --noconfirm $USR_EXT_PKGS &> /dev/null  # Install additional packages
 # Install AUR helper (paru or yay)
 if [ "$aur" = "paru" ]; then
+    print_info "    - installing AUR helper (paru)"
     git clone https://aur.archlinux.org/paru.git /tmp/paru &> /dev/null
     cd /tmp/paru
     makepkg -si --noconfirm &> /dev/null
@@ -530,6 +613,7 @@ if [ "$aur" = "paru" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     paru -Syyu --noconfirm &> /dev/null
 elif [ "$aur" = "yay" ]; then
+    print_info "    - installing AUR helper (yay)"
     git clone https://aur.archlinux.org/yay.git /tmp/yay &> /dev/null
     cd /tmp/yay
     makepkg -si --noconfirm &> /dev/null
@@ -537,6 +621,7 @@ elif [ "$aur" = "yay" ]; then
     sudo pacman -Syyu --noconfirm &> /dev/null
     yay -Syyu --noconfirm &> /dev/null
 fi
+print_info "    - installing QoL packages"
 # QoL
 ${aur} -S --noconfirm pkgfile &> /dev/null       # Install 'pkgfile'
 sudo pkgfile --update &> /dev/null               # Update 'pkgfile' database(s)
@@ -558,15 +643,17 @@ fi
 # Install and enable optional services
 # SSH
 if [ "$ssh" = "yes" ]; then
-    print_info "    - installing and configuring SSH"
+    print_info "    - installing SSH"
     sudo pacman -S --noconfirm openssh &> /dev/null  # Install 'openSSH'
+    print_info "    - enabling SSH"
     sudo systemctl enable sshd.service &> /dev/null  # Enable 'sshd'
 fi
 # Bluetooth
 if [ "$bluetooth" = "yes" ]; then
-    print_info "    - installing and configuring Bluetooth"
+    print_info "    - installing Bluetooth"
     # Install Bluetooth packages
     sudo pacman -S --noconfirm bluez bluez-utils bluez-tools &> /dev/null
+    print_info "    - configuring Bluetooth"
     BLUETOOTH_CONF="/etc/bluetooth/main.conf"  # Configuration file
     # Ensure ControllerMode is set to 'dual'
     if grep -q "^#*ControllerMode = dual" "$BLUETOOTH_CONF"; then
@@ -584,11 +671,15 @@ if [ "$bluetooth" = "yes" ]; then
     else
         echo -e "\n[General]\nExperimental = true" | sudo tee -a "$BLUETOOTH_CONF" > /dev/null
     fi
+    # Enable Bluetooth service
+    print_info "    - enabling Bluetooth"
+    sudo systemctl enable bluetooth.service &> /dev/null
 fi
 # Printer
 if [ "$printer" = "yes" ]; then
-    print_info "    - installing and configuring printer"
+    print_info "    - installing printer"
     sudo pacman -S --noconfirm cups cups-pdf bluez-cups &> /dev/null  # Install 'cups' and related packages
+    print_info "    - configuring printer"
     sudo systemctl enable cups.service &> /dev/null                   # Enable 'cups'
 fi
 exit
@@ -604,111 +695,13 @@ print_info "[*] Configuring desktop environment ..."
 
 su $username
 if [ "$de" = "gnome" ]; then
-    sudo pacman -S --noconfirm $DE &> /dev/null                                     # Install GNOME packages
+    ${aur} -Syy &> /dev/null           # Refresh package manager database(s)
+    ${aur} -S $DE &> /dev/null         # Install GNOME
+    ${aur} -S $GNOME_EXT &> /dev/null  # Install GNOME extensions
     sudo ln -sf /dev/null /etc/udev/rules.d/61-gdm.rules                            # Disable GDM rule
     sudo sed -i 's/^#WaylandEnable=false/WaylandEnable=true/' /etc/gdm/custom.conf  # Enable Wayland in GDM
-    # GNOME Keybinds - support vars
-    KEYS_GNOME_WM=/org/gnome/desktop/wm/keybindings
-    KEYS_GNOME_SHELL=/org/gnome/shell/keybindings
-    KEYS_MUTTER=/org/gnome/mutter/keybindings
-    KEYS_MEDIA=/org/gnome/settings-daemon/plugins/media-keys
-    KEYS_MUTTER_WAYLAND_RESTORE=/org/gnome/mutter/wayland/keybindings/restore-shortcuts
-    # Reset conflict shortcut
-    for i in {1..9}; do
-        dconf write "${KEYS_GNOME_SHELL}/switch-to-application-${i}" "@as []" &> /dev/null
-    done
-    # Close Window
-    dconf write ${KEYS_GNOME_WM}/close "['<Super>q', '<Alt>F4']"
-    # Application
-    dconf write ${KEYS_MEDIA}/terminal "['<Super>t']"  # Launch terminal
-    dconf write ${KEYS_MEDIA}/www "['<Super>f']"       # Launch web browser
-    dconf write ${KEYS_MEDIA}/email "['<Super>m']"     # Launch email client
-    dconf write ${KEYS_MEDIA}/home "['<Super>e']"      # Home folder
-
-    dconf write ${KEYS_MEDIA}/screensaver    print_info "    - configuring GNOME (extensions)" "['<Super>Escape']"  # Lock screen
-    # Workspaces - move to N workspace
-    for i in {1..9}; do
-        dconf write "${KEYS_GNOME_WM}/switch-to-workspace-${i}" "['<Super>${i}']" &> /dev/null
-    done
-    # Workspaces - move current application to N workspace
-    for i in {1..9}; do
-        dconf write "${KEYS_GNOME_WM}/move-to-workspace-${i}" "['<Shift><Super>${i}']" &> /dev/null
-    done
-    # Workspace - motion
-    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-right "['<Alt><Super>Right']" &> /dev/null  # Move right
-    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-left "['<Alt><Super>Left']" &> /dev/null    # Move left
-    dconf write ${KEYS_GNOME_WM}/switch-to-workspace-last "['<Super>0']" &> /dev/null            # Move last
-    # Application
-    BASE_PKG=(
-        gnome-control-center  # GNOME's main interface to configure various aspects of the desktop
-        gnome-tweaks          # Graphical interface for advanced GNOME 3 settings (Tweak Tool)
-        mission-center        # Monitor your CPU, Memory, Disk, Network and GPU usage
-        extension-manager     # A native tool for browsing, installing, and managing GNOME Shell Extensions
-        dconf-editor          # GSettings editor for GNOME
-    )
-    FILE_PKG=(
-        nautilus               # Default file manager for GNOME
-        sushi                  # A quick previewer for Nautilus
-        libnautilus-extension  # Extension interface for Nautilus
-    )
-    FILE_ADDON_PKG=(
-        nautilus-image-converter            # Nautilus extension to rotate/resize image files
-        nautilus-share                      # Nautilus extension to share folder using Samba
-        seahorse-nautilus                   # PGP encryption and signing for Nautilus
-        turtle                              # Manage your git repositories with easy-to-use dialogs in Nautilus
-        nautilus-open-any-terminal          # Context-menu entry for opening other terminal in nautilus
-        nautilus-open-in-code               # Open current directory in VSCode from Nautilus context menu
-        folder-color-nautilus               # Change your folder color in Nautilus
-        ffmpeg-audio-thumbnailer            # A minimal audio file thumbnailer for file managers, such as nautilus, dolphin, thunar, and nemo
-    )
-    APP_PKG=(
-        blackbox-terminal                   # Beautiful GTK 4 terminal
-        firefox                             # Fast, Private & Safe Web Browser
-        thunderbird                         # Standalone mail and news reader from mozilla.org
-        gnome-calculator                    # GNOME Scientific calculator
-        gnome-calendar                      # Simple and beautiful calendar application designed to perfectly fit the GNOME desktop
-        gnome-text-editor                   # A simple text editor for the GNOME desktop
-        gnome-disk-utility                  # Disk Management Utility for GNOME
-        papers                              # Document viewer (PDF, PostScript, XPS, djvu, tiff, cbr, cbz, cb7, cbt)
-        loupe                               # A simple image viewer for GNOME
-        clapper                             # Modern and user-friendly media player
-    )
-    OFFICE_PKG=(
-        libreoffice-fresh                   # LibreOffice branch which contains new features and program enhancements
-        libreoffice-extension-texmaths      # LaTeX equation editor for LibreOffice
-        libreoffice-extension-writer2latex  # LibreOffice extensions for converting to and working with LaTeX in LibreOffice
-    )
-    ${aur} -Syy &> /dev/null  # Refresh package manager database(s)
-    # Install packages
-    ${aur} -S --noconfirm "${BASE_PKG[@]}" &> /dev/null
-    ${aur} -S --noconfirm "${APP_PKG[@]}" &> /dev/null
-    ${aur} -S --noconfirm "${FILE_PKG[@]}" &> /dev/null
-    ${aur} -S --noconfirm "${FILE_ADDON_PKG[@]}" &> /dev/null
-    ${aur} -S --noconfirm "${OFFICE_PKG[@]}" &> /dev/null
-
     # Add blackbox-terminal as "Open in terminal ..."
     gsettings set com.github.stunkymonkey.nautilus-open-any-terminal terminal blackbox-terminal
-
-    # GNOME Extensions
-    EXT_PKG=(
-        gnome-shell-extension-blur-my-shell                  # Extension that adds a blur look to different parts of the GNOME Shell
-        gnome-shell-extension-dash-to-dock                   # Move the dash out of the overview transforming it in a dock
-        gnome-shell-extension-just-perfection-desktop        # Just Perfection GNOME Shell Desktop
-        gnome-shell-extension-unite                          # Unite makes GNOME Shell look like Ubuntu Unity Shell
-        gnome-shell-extension-rounded-window-corners-reborn  # A GNOME Shell extension that adds rounded corners for all windows
-        gnome-shell-extension-alphabetical-grid-extension    # Restore the alphabetical ordering of the app grid, removed in GNOME 3.38
-        gnome-shell-extensions                               # Extensions for GNOME shell, including classic mode
-        gnome-shell-extension-arc-menu                       # Application menu extension for GNOME Shell
-        gnome-shell-extension-arch-update                    # Convenient indicator for Arch Linux updates in GNOME Shell
-        gnome-shell-extension-runcat                         # Cat tells you the CPU usage by running speed
-        gnome-shell-extension-openweatherrefined             # Display weather for the current or a specified location in the GNOME shell
-        gnome-shell-extension-weather-oclock                 # Displays the current weather inside the pill next to the clock
-        gnome-shell-extension-top-bar-organizer              # Gnome: Organize the items of the top (menu)bar
-        gnome-shell-extension-bluetooth-quick-connect        # Allow to connect Bluetooth paired devices from GNOME control panel.
-        gnome-shell-extension-extension-list                 # A Simple GNOME Shell extension manager in the top panel
-        gnome-shell-extension-clipboard-indicator            # Adds a clipboard indicator to the top panel, and caches clipboard history
-    )
-    ${aur} -S --noconfirm "${EXT_PKG[@]}" &> /dev/null
     sudo systemctl enable gdm.service  # Enable GDM service
 # elif [ "$de" = "kde" ]; then
     # W.I.P.

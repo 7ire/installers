@@ -19,7 +19,6 @@ TIMELINE_LIMIT_YEARLY="0"   # Limit of yearly snapshots
 
 
 
-
 # ------------------------------------------------------------------------------
 #                     Install and configure snapshot tools
 # ------------------------------------------------------------------------------
@@ -42,7 +41,6 @@ sudo chmod 750 /.snapshots &> /dev/null
 sudo chown :wheel /.snapshots &> /dev/null
 
 print_success "[+] Snapshot tools configured successfully."
-
 
 
 
